@@ -1,0 +1,168 @@
+@@@@@@@@@@@@@@@@@@@@@@@@@ Testing Reaching session @@@@@@@@@@@@@@@@@@@@@@@@@
+------------------------------- Event Durations -------------------------------
+Number of trials devaiting from desired duration:
+0
+Deviating trials and their deviation (in ms, exmaple: -10 = stimuli was 10 ms shorter than desired):
+Deviations in ms:
+    <strong>Desired_duration</strong>    <strong>Mean_duration</strong>      <strong>STD</strong>      <strong>Deviation_of_mean_from_desired</strong>
+    <strong>________________</strong>    <strong>_____________</strong>    <strong>_______</strong>    <strong>______________________________</strong>
+
+          1000             1000.1         0.1891               0.084665           
+           270             269.99         0.2099              -0.012651           
+            30             30.009        0.17026              0.0086096           
+            30             30.003        0.18199              0.0033954           
+            30             30.012        0.20612               0.012186           
+           500             471.18         102.26                -28.817           
+
+------------------------------- Has Values -------------------------------
+------------------------------- Relations -------------------------------
+------------------------------- Conditions -------------------------------
+------------------------------- Target Repeatitions -------------------------------
+------------------------------- Prime right/left alternations -------------------------------
+------------------------------- Count trials and blocks -------------------------------
+------------------------------- Test results (0=didnt pass test) -------------------------------
+------------------------------------------------------------------------------------------------
+                     deviations: 1
+              deviation_of_mean: 1
+                            std: 1
+                    prime_alter: 1
+                    data_values: 1
+                    traj_values: 1
+    prime_target_common_letters: 1
+           prime_target_categor: 1
+      prime_dist_common_letters: 1
+             prime_dist_categor: 1
+                     conditions: 1
+               word_dont_repeat: 1
+                    block_count: 1
+                    trial_count: 1
+
+@@@@@@@@@@@@@@@@@@@@@@@@@ Testing Keyboard session @@@@@@@@@@@@@@@@@@@@@@@@@
+------------------------------- Event Durations -------------------------------
+Number of trials devaiting from desired duration:
+0
+Deviating trials and their deviation (in ms, exmaple: -10 = stimuli was 10 ms shorter than desired):
+Deviations in ms:
+    <strong>Desired_duration</strong>    <strong>Mean_duration</strong>      <strong>STD</strong>      <strong>Deviation_of_mean_from_desired</strong>
+    <strong>________________</strong>    <strong>_____________</strong>    <strong>_______</strong>    <strong>______________________________</strong>
+
+          1000             1000.1        0.16821                0.082831          
+           270             269.98        0.17033               -0.020341          
+            30             30.021        0.16373                0.020557          
+            30             29.991        0.16623              -0.0094842          
+            30             30.011        0.14701                0.010877          
+           500             492.21         19.444                 -7.7943          
+
+------------------------------- Has Values -------------------------------
+target_ans_left is missing values in trials: 
+     8
+    18
+    24
+    28
+    30
+    39
+    43
+    45
+    46
+    60
+    62
+    74
+    83
+    86
+    91
+   102
+   111
+   119
+   139
+   165
+   183
+   197
+   199
+   205
+   231
+   240
+
+target_ans_nat is missing values in trials: 
+     8
+    18
+    24
+    28
+    30
+    39
+    43
+    45
+    46
+    60
+    62
+    74
+    83
+    86
+    91
+   102
+   111
+   119
+   139
+   165
+   183
+   197
+   199
+   205
+   231
+   240
+
+target_correct is missing values in trials: 
+     8
+    18
+    24
+    28
+    30
+    39
+    43
+    45
+    46
+    60
+    62
+    74
+    83
+    86
+    91
+   102
+   111
+   119
+   139
+   165
+   183
+   197
+   199
+   205
+   231
+   240
+
+prime_ans_left is missing values in trials: 
+    60
+
+prime_correct is missing values in trials: 
+    60
+
+------------------------------- Relations -------------------------------
+------------------------------- Conditions -------------------------------
+------------------------------- Target Repeatitions -------------------------------
+------------------------------- Prime right/left alternations -------------------------------
+------------------------------- Count trials and blocks -------------------------------
+------------------------------- Test results (0=didnt pass test) -------------------------------
+------------------------------------------------------------------------------------------------
+                     deviations: 1
+              deviation_of_mean: 1
+                            std: 1
+                    prime_alter: 1
+                    data_values: 0
+                    traj_values: 1
+    prime_target_common_letters: 1
+           prime_target_categor: 1
+      prime_dist_common_letters: 1
+             prime_dist_categor: 1
+                     conditions: 1
+               word_dont_repeat: 1
+                    block_count: 1
+                    trial_count: 1
+
