@@ -140,6 +140,7 @@ function analysis_pipeline(analysisParameters,roundNum)
         tic
         disp('Creating processing data files for sub:');
         for iSub = p.SUBS
+            disp(num2str(iSub));
             p = defineParams_within_round(p, iSub);
             reach_traj_table = readtable([p.DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.csv']);
             reach_data_table = readtable([p.DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.csv']);
@@ -155,10 +156,10 @@ function analysis_pipeline(analysisParameters,roundNum)
                 reach_data_table.Properties.VariableNames{'same'} = 'con';
                 keyboard_data_table.Properties.VariableNames{'same'} = 'con';
             end
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat'], 'reach_traj_table'); % '.mat' is faster to read than '.csv'.
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat'], 'reach_data_table');
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat'], 'keyboard_data_table');
-            disp(num2str(iSub));
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat'], 'reach_traj_table'); % '.mat' is faster to read than '.csv'.
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat'], 'reach_data_table');
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat'], 'keyboard_data_table');
+            
         end
         timing = num2str(toc);
         disp(['Done Creating processing data files. ' timing 'Sec'])
@@ -250,9 +251,9 @@ function analysis_pipeline(analysisParameters,roundNum)
             end
         
             % Save
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat'], 'reach_pre_norm_traj_table');
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-            % % % % % % save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data_proc.mat'], 'keyboard_data_table'); % Keyboard data isn't pre-processed because there is no need for that.
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat'], 'reach_pre_norm_traj_table');
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data_proc.mat'], 'keyboard_data_table'); % Keyboard data isn't pre-processed because there is no need for that.
         end
         
         % Get minimal traj length.
@@ -285,42 +286,57 @@ function analysis_pipeline(analysisParameters,roundNum)
         save([p.PROC_DATA_FOLDER '/too_short_to_filter_'  p.DAY '_subs_' p.SUBS_STRING '.mat'], 'too_short_to_filter');
         timing = num2str(toc);
         disp(['Preprocessing done. ' timing 'Sec']);
+
+        if (strcmp(analysisParameters.analysisRounds{roundNum},'noTrajNorm_noStandardization'))
+            % only do trial and participant screening based on the
+            % non-normalized trajectories.
         %% Trial Screening
-        tic
-        for iTraj = 1:length(traj_names)
-            [reach_bad_trials, reach_n_bad_trials, reach_bad_trials_i] = trialScreen(traj_names{iTraj}, 'reach', p);
-            % % % % Exp 1,2,3 has no keybaord session.
-            % % % if any(p.ORIG_SUBS < 43)
-            % % %     keyboard_n_bad_trials = array2table(zeros(size(reach_n_bad_trials)), 'VariableNames',reach_n_bad_trials.Properties.VariableNames);
-            % % %     keyboard_bad_trials_i = table('size',size(reach_bad_trials_i), 'variableNames',reach_bad_trials_i.Properties.VariableNames, 'VariableTypes',repmat("cell", [1, width(reach_bad_trials_i)]));
-            % % %     keyboard_bad_trials = {};
-            % % %     for iSub = p.SUBS
-            % % %         keyboard_bad_trials{iSub,1} = array2table(zeros(size(reach_bad_trials{iSub})), 'VariableNames',reach_bad_trials{iSub}.Properties.VariableNames);
-            % % %     end
-            % % % else
-                [keyboard_bad_trials, keyboard_n_bad_trials, keyboard_bad_trials_i] = trialScreen(traj_names{iTraj}, 'keyboard', p);
-            % % % end
-            save([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_bad_trials', 'reach_n_bad_trials', 'reach_bad_trials_i', 'keyboard_bad_trials', 'keyboard_n_bad_trials', 'keyboard_bad_trials_i');
-        end
-        timing = num2str(toc);
-        disp(['Trial screening done. ' timing 'Sec']);
-        %% Subject screening
-        tic
-        for iTraj = 1:length(traj_names')
-            [reach_bad_subs, reach_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'reach', p);
-            [keyboard_bad_subs, keyboard_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'keyboard', p);
-            % Exp 1,2,3 had no keyboard task.
-            if any(p.ORIG_SUBS < 43)
-                keyboard_bad_subs(:,:) = array2table(zeros(size(keyboard_bad_subs)));
+            tic
+            for iTraj = 1:length(traj_names)
+                [reach_bad_trials, reach_n_bad_trials, reach_bad_trials_i] = trialScreen(traj_names{iTraj}, 'reach', p);
+                % % % % Exp 1,2,3 has no keybaord session.
+                % % % if any(p.ORIG_SUBS < 43)
+                % % %     keyboard_n_bad_trials = array2table(zeros(size(reach_n_bad_trials)), 'VariableNames',reach_n_bad_trials.Properties.VariableNames);
+                % % %     keyboard_bad_trials_i = table('size',size(reach_bad_trials_i), 'variableNames',reach_bad_trials_i.Properties.VariableNames, 'VariableTypes',repmat("cell", [1, width(reach_bad_trials_i)]));
+                % % %     keyboard_bad_trials = {};
+                % % %     for iSub = p.SUBS
+                % % %         keyboard_bad_trials{iSub,1} = array2table(zeros(size(reach_bad_trials{iSub})), 'VariableNames',reach_bad_trials{iSub}.Properties.VariableNames);
+                % % %     end
+                % % % else
+                    [keyboard_bad_trials, keyboard_n_bad_trials, keyboard_bad_trials_i] = trialScreen(traj_names{iTraj}, 'keyboard', p);
+                % % % end
+                save([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_bad_trials', 'reach_n_bad_trials', 'reach_bad_trials_i', 'keyboard_bad_trials', 'keyboard_n_bad_trials', 'keyboard_bad_trials_i');
             end
-            bad_subs = array2table(reach_bad_subs{:,:} | keyboard_bad_subs{:,:}, 'VariableNames',reach_bad_subs.Properties.VariableNames);
-            good_subs = p.SUBS(~ismember(p.SUBS, find(bad_subs.any)));
-            save([p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'bad_subs', 'reach_bad_subs', 'keyboard_bad_subs');
-            save([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
-            save([p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_valid_trials', 'keyboard_valid_trials');
+            timing = num2str(toc);
+            disp(['Trial screening done. ' timing 'Sec']);
+            %% Subject screening
+            tic
+            for iTraj = 1:length(traj_names')
+                [reach_bad_subs, reach_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'reach', p);
+                [keyboard_bad_subs, keyboard_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'keyboard', p);
+                % Exp 1,2,3 had no keyboard task.
+                if any(p.ORIG_SUBS < 43)
+                    keyboard_bad_subs(:,:) = array2table(zeros(size(keyboard_bad_subs)));
+                end
+                bad_subs = array2table(reach_bad_subs{:,:} | keyboard_bad_subs{:,:}, 'VariableNames',reach_bad_subs.Properties.VariableNames);
+                good_subs = p.SUBS(~ismember(p.SUBS, find(bad_subs.any)));
+                save([p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'bad_subs', 'reach_bad_subs', 'keyboard_bad_subs');
+                save([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
+                save([p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_valid_trials', 'keyboard_valid_trials');
+            end
+            timing = num2str(toc);
+            disp(['Sub screening done. ' timing 'Sec']);
+        else % analysis normalizes trajectory
+            % Copy screening decision from the non-normalized analysis, if
+            % exists:
+            screeningDecisionSrcFldr = analysisParameters.targetPreProcData_noTrajNorm_noStandardization_folder;
+            for iTraj = 1:length(traj_names)
+                copyfile([screeningDecisionSrcFldr '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'])
+                copyfile([screeningDecisionSrcFldr  '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
+                copyfile([screeningDecisionSrcFldr  '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
+                copyfile([screeningDecisionSrcFldr  '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
+            end
         end
-        timing = num2str(toc);
-        disp(['Sub screening done. ' timing 'Sec']);
 
     else % Analysis not done from raw data, but from pre-prepared processed data:
 
