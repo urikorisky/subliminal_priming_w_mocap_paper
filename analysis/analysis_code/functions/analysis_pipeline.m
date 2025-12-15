@@ -135,7 +135,7 @@ function analysis_pipeline(analysisParameters,roundNum)
     %     disp("Done Simulating less trials.");
     % end
     if(analysisParameters.fromRawData)
-        %% Create proc data file
+        %% Create processed data files
         % Copy the original data to a new file, to keep the data safe.
         tic
         disp('Creating processing data files for sub:');
@@ -151,6 +151,7 @@ function analysis_pipeline(analysisParameters,roundNum)
             % % % else
                 keyboard_data_table = readtable([p.DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.csv']);
             % % % end
+
             % Change 'same' column to 'con'.
             if any(contains(reach_data_table.Properties.VariableNames, 'same'))
                 reach_data_table.Properties.VariableNames{'same'} = 'con';
@@ -196,36 +197,36 @@ function analysis_pipeline(analysisParameters,roundNum)
         % % % end
         % % % timing = num2str(toc);
         % % % disp(['Done Adding missing fields. ' timing 'Sec'])
-        % % % %% Add trials.
-        % % % % Adds trials to subjects who quit before the experiment ended.
-        % % % tic
-        % % % for iSub = p.SUBS
-        % % %     p = defineParams_within_round(p, iSub);
-        % % %     reach_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-        % % %     reach_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat']);  reach_data_table = reach_data_table.reach_data_table;
-        % % %     keyboard_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat']);  keyboard_data_table = keyboard_data_table.keyboard_data_table;
-        % % %     % Remove practice
-        % % %     reach_traj_table(reach_traj_table.practice > 0, :) = [];
-        % % %     reach_data_table(reach_data_table.practice > 0, :) = [];
-        % % %     keyboard_data_table(keyboard_data_table.practice > 0, :) = [];
-        % % %     % Fill missing trials.
-        % % %     reach_last_trial = height(reach_data_table);
-        % % %     keyboard_last_trial = height(keyboard_data_table);
-        % % %     if reach_last_trial < p.NUM_TRIALS || keyboard_last_trial < p.NUM_TRIALS
-        % % %         reach_traj_table{reach_last_trial*p.MAX_CAP_LENGTH+1 : p.NUM_TRIALS*p.MAX_CAP_LENGTH, 'iTrial'} = nan;
-        % % %         reach_data_table{reach_last_trial+1 : p.NUM_TRIALS, 'iTrial'} = nan;
-        % % %         keyboard_data_table{keyboard_last_trial+1 : p.NUM_TRIALS, 'iTrial'} = nan;
-        % % %         % Mark missing trials.
-        % % %         reach_data_table{reach_last_trial+1 : end, 'quit'} = 1;
-        % % %         keyboard_data_table{keyboard_last_trial+1 : end, 'quit'} = 1;
-        % % %         save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat'], 'reach_data_table');
-        % % %         save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat'], 'reach_traj_table');
-        % % %         save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat'], 'keyboard_data_table');
-        % % %         disp(['Added missing trials to sub' num2str(iSub)]);
-        % % %     end
-        % % % end
-        % % % timing = num2str(toc);
-        % % % disp(['Done adding missing trials. ' timing 'Sec'])
+        %% Add trials.
+        % Adds trials to subjects who quit before the experiment ended.
+        tic
+        for iSub = p.SUBS
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat']);  reach_data_table = reach_data_table.reach_data_table;
+            keyboard_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat']);  keyboard_data_table = keyboard_data_table.keyboard_data_table;
+            % Remove practice
+            reach_traj_table(reach_traj_table.practice > 0, :) = [];
+            reach_data_table(reach_data_table.practice > 0, :) = [];
+            keyboard_data_table(keyboard_data_table.practice > 0, :) = [];
+            % Fill missing trials.
+            reach_last_trial = height(reach_data_table);
+            keyboard_last_trial = height(keyboard_data_table);
+            if reach_last_trial < p.NUM_TRIALS || keyboard_last_trial < p.NUM_TRIALS
+                reach_traj_table{reach_last_trial*p.MAX_CAP_LENGTH+1 : p.NUM_TRIALS*p.MAX_CAP_LENGTH, 'iTrial'} = nan;
+                reach_data_table{reach_last_trial+1 : p.NUM_TRIALS, 'iTrial'} = nan;
+                keyboard_data_table{keyboard_last_trial+1 : p.NUM_TRIALS, 'iTrial'} = nan;
+                % Mark missing trials.
+                reach_data_table{reach_last_trial+1 : end, 'quit'} = 1;
+                keyboard_data_table{keyboard_last_trial+1 : end, 'quit'} = 1;
+                save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data.mat'], 'reach_data_table');
+                save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_traj.mat'], 'reach_traj_table');
+                save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_keyboard_data.mat'], 'keyboard_data_table');
+                disp(['Added missing trials to sub' num2str(iSub)]);
+            end
+        end
+        timing = num2str(toc);
+        disp(['Done adding missing trials. ' timing 'Sec'])
         %% Preprocessing & Normalization
         tic
         % Trials too short to filter.
@@ -338,183 +339,187 @@ function analysis_pipeline(analysisParameters,roundNum)
             end
         end
 
-    else % Analysis not done from raw data, but from pre-prepared processed data:
+        %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %                                                %
+        % Preform statistical analyses per-participant:  %
+        %                                                %
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% Maximum absolute deviation
+        tic
+        for iTraj = 1:length(traj_names)
+            for iSub = p.SUBS
+                % Load.
+                p = defineParams_within_round(p, iSub);
+                reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+                reach_prenorm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_prenorm_traj_table = reach_prenorm_traj_table.reach_pre_norm_traj_table;
+                reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+                % Compute.
+                reach_data_table = calcMAD(reach_traj_table, reach_prenorm_traj_table, reach_data_table, traj_names{iTraj}, p);
+                % Save.
+                save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+            end
+        end
+        timing = num2str(toc);
+        disp(['MAD calc done. ' timing 'Sec']);
 
-    end % /Pre-process data
+        %% MAD standardized per subject
+        if (p.NORMALIZE_WITHIN_SUB)
+            tic
+            for iTraj = 1:length(traj_names)
+                % Get the list of bad trials for all subjects:
+                bad_trials = load([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
+                reach_bad_trials = bad_trials.reach_bad_trials;
+        
+                for iSub = p.SUBS
+                    % Load.
+                    p = defineParams_within_round(p, iSub);
+                    reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+                    % Find trials which will later be excluded:
+                        % Bad trials reasons, Remove reason: "slow_mvmnt", "loop".
+                        reasons = string(reach_bad_trials{iSub}.Properties.VariableNames);
+                        reasons(reasons == "any" | reasons == "slow_mvmnt" | reasons == "loop") = [];
+                        bad = any(reach_bad_trials{iSub}{:, reasons}, 2);
+                    % Compute.
+                    reach_data_table.target_to_mad_z = nan(size(reach_data_table,1),1);
+                    reach_data_table.target_to_mad_z(~isnan(reach_data_table.target_to_mad) & ~bad) = ...
+                        zscore(reach_data_table.target_to_mad(~isnan(reach_data_table.target_to_mad) & ~bad));
+                    % Save.
+                    save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+                end
+            end
+            timing = num2str(toc);
+            disp(['MAD z-scored calc done. ' timing 'Sec']);
+        end
 
-end
-% % % % 
-% % % %     %% Maximum absolute deviation
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         for iSub = p.SUBS
-% % % %             % Load.
-% % % %             p = defineParams_within_round(p, iSub);
-% % % %             reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %             reach_prenorm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_prenorm_traj_table = reach_prenorm_traj_table.reach_pre_norm_traj_table;
-% % % %             reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %             % Compute.
-% % % %             reach_data_table = calcMAD(reach_traj_table, reach_prenorm_traj_table, reach_data_table, traj_names{iTraj}, p);
-% % % %             % Save.
-% % % %             save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %         end
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['MAD calc done. ' timing 'Sec']);
-% % % % 
-% % % %     %% MAD standardized per subject
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         % Get the list of bad trials for all subjects:
-% % % %         bad_trials = load([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
-% % % %         reach_bad_trials = bad_trials.reach_bad_trials;
-% % % % 
-% % % %         for iSub = p.SUBS
-% % % %             % Load.
-% % % %             p = defineParams_within_round(p, iSub);
-% % % %             reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %             % Find trials which will later be excluded:
-% % % %                 % Bad trials reasons, Remove reason: "slow_mvmnt", "loop".
-% % % %                 reasons = string(reach_bad_trials{iSub}.Properties.VariableNames);
-% % % %                 reasons(reasons == "any" | reasons == "slow_mvmnt" | reasons == "loop") = [];
-% % % %                 bad = any(reach_bad_trials{iSub}{:, reasons}, 2);
-% % % %             % Compute.
-% % % %             reach_data_table.target_to_mad_z = nan(size(reach_data_table,1),1);
-% % % %             reach_data_table.target_to_mad_z(~isnan(reach_data_table.target_to_mad) & ~bad) = ...
-% % % %                 zscore(reach_data_table.target_to_mad(~isnan(reach_data_table.target_to_mad) & ~bad));
-% % % %             % Save.
-% % % %             save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %         end
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['MAD calc done. ' timing 'Sec']);
-% % % %     %% Heading angle
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         % Load.
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         reach_prenorm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_prenorm_traj_table = reach_prenorm_traj_table.reach_pre_norm_traj_table;
-% % % %         reach_traj_table = calcHeadAngle(reach_traj_table, reach_prenorm_traj_table, p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Heading angle calc done. ' timing 'Sec']);
-% % % %     %% Implied endpoint.
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         % Load.
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         reach_traj_table = calcIEP(reach_traj_table, traj_names{1}, p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Implied endpoint calc done. ' timing 'Sec']);
-% % % %     %% Changes of mind
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %         reach_data_table = countCom(reach_traj_table, reach_data_table, p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['COM calc done. ' timing 'Sec']);
-% % % %     %% Total distance traveled
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_traj_table = reach_traj_table.reach_pre_norm_traj_table;
-% % % %         reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %         reach_data_table = calcTotDistTravel(reach_traj_table, reach_data_table, p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Total distance traveled calc done. ' timing 'Sec']);
-% % % %     %% AUC
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         disp(iSub)
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         reach_pre_norm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_pre_norm_traj_table = reach_pre_norm_traj_table.reach_pre_norm_traj_table;
-% % % %         reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %         reach_data_table = calcAuc(reach_traj_table, reach_data_table, reach_pre_norm_traj_table, p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['AUC calc done. ' timing 'Sec']);
-% % % %     %% Velocity
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         disp(iSub);
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         prenorm_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  prenorm_traj_table = prenorm_traj_table.reach_pre_norm_traj_table;
-% % % %         reach_traj_table = calcVelAcc(prenorm_traj_table, reach_traj_table, 'vel', p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Velocity calc done. ' timing 'Sec']);
-% % % %     %% Max Velocity
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         disp(iSub);
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         reach_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
-% % % %         reach_data_table = calcMaxVel(reach_traj_table, reach_data_table, p);
-% % % %         save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Max Velocity calc done. ' timing 'Sec']);
-% % % %     %% Acceleration
-% % % %     tic
-% % % %     for iSub = p.SUBS
-% % % %         p = defineParams_within_round(p, iSub);
-% % % %         reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
-% % % %         prenorm_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  prenorm_traj_table = prenorm_traj_table.reach_pre_norm_traj_table;
-% % % %         reach_traj_table = calcVelAcc(prenorm_traj_table, reach_traj_table, 'acc', p);
-% % % %         save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Acceleration calc done. ' timing 'Sec']);
-% % % %     %% Sorting and averaging (within subject)
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         bad_trials = load([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
-% % % %         reach_bad_trials = bad_trials.reach_bad_trials;
-% % % %         keyboard_bad_trials = bad_trials.keyboard_bad_trials;
-% % % %         for iSub = p.SUBS
-% % % %             disp(iSub);
-% % % %             p = defineParams_within_round(p, iSub);
-% % % %             [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_names{iTraj}, reach_bad_trials, keyboard_bad_trials, pas_rate, p.NORMALIZE_WITHIN_SUB, p);
-% % % %             save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_sorted_trials_' traj_names{iTraj}{1} '.mat'], 'r_trial', 'k_trial');
-% % % %             save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_avg_' traj_names{iTraj}{1} '.mat'], 'r_avg', 'k_avg');
-% % % %         end
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Sorting and avging within sub done. ' timing 'Sec']);
-% % % %     %% Reach Area
-% % % %     % Area between left and right traj for con/incon condition.
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         reach_area.con = NaN(1,p.MAX_SUB);
-% % % %         reach_area.incon = NaN(1,p.MAX_SUB);
-% % % %         good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-% % % %         for iSub = good_subs
-% % % %             disp(iSub)
-% % % %             p = defineParams_within_round(p, iSub);
-% % % %             r_avg = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_avg_' traj_names{iTraj}{1} '.mat']);  r_avg = r_avg.r_avg;
-% % % %             reach_area.con(iSub) = calcReachArea(r_avg.traj.con_left, r_avg.traj.con_right, p);
-% % % %             reach_area.incon(iSub) = calcReachArea(r_avg.traj.incon_left, r_avg.traj.incon_right, p);
-% % % %         end
-% % % %         save([p.PROC_DATA_FOLDER 'reach_area_' traj_names{iTraj}{1} '_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'reach_area');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Reach area calc done. ' timing 'Sec']);
+        %% Heading angle
+        tic
+        for iSub = p.SUBS
+            % Load.
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_prenorm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_prenorm_traj_table = reach_prenorm_traj_table.reach_pre_norm_traj_table;
+            reach_traj_table = calcHeadAngle(reach_traj_table, reach_prenorm_traj_table, p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
+        end
+        timing = num2str(toc);
+        disp(['Heading angle calc done. ' timing 'Sec']);
+        %% Implied endpoint.
+        tic
+        for iSub = p.SUBS
+            % Load.
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_traj_table = calcIEP(reach_traj_table, traj_names{1}, p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
+        end
+        timing = num2str(toc);
+        disp(['Implied endpoint calc done. ' timing 'Sec']);
+        %% Changes of mind
+        tic
+        for iSub = p.SUBS
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+            reach_data_table = countCom(reach_traj_table, reach_data_table, p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+        end
+        timing = num2str(toc);
+        disp(['COM calc done. ' timing 'Sec']);
+        %% Total distance traveled
+        tic
+        for iSub = p.SUBS
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_traj_table = reach_traj_table.reach_pre_norm_traj_table;
+            reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+            reach_data_table = calcTotDistTravel(reach_traj_table, reach_data_table, p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+        end
+        timing = num2str(toc);
+        disp(['Total distance traveled calc done. ' timing 'Sec']);
+        %% AUC
+        tic
+        for iSub = p.SUBS
+            disp(iSub)
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_pre_norm_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  reach_pre_norm_traj_table = reach_pre_norm_traj_table.reach_pre_norm_traj_table;
+            reach_data_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+            reach_data_table = calcAuc(reach_traj_table, reach_data_table, reach_pre_norm_traj_table, p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+        end
+        timing = num2str(toc);
+        disp(['AUC calc done. ' timing 'Sec']);
+        %% Velocity
+        tic
+        for iSub = p.SUBS
+            disp(iSub);
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            prenorm_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  prenorm_traj_table = prenorm_traj_table.reach_pre_norm_traj_table;
+            reach_traj_table = calcVelAcc(prenorm_traj_table, reach_traj_table, 'vel', p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
+        end
+        timing = num2str(toc);
+        disp(['Velocity calc done. ' timing 'Sec']);
+        %% Max Velocity
+        tic
+        for iSub = p.SUBS
+            disp(iSub);
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            reach_data_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat']);  reach_data_table = reach_data_table.reach_data_table;
+            reach_data_table = calcMaxVel(reach_traj_table, reach_data_table, p);
+            save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_data_proc.mat'], 'reach_data_table');
+        end
+        timing = num2str(toc);
+        disp(['Max Velocity calc done. ' timing 'Sec']);
+        %% Acceleration
+        tic
+        for iSub = p.SUBS
+            p = defineParams_within_round(p, iSub);
+            reach_traj_table = load([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat']);  reach_traj_table = reach_traj_table.reach_traj_table;
+            prenorm_traj_table = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_reach_pre_norm_traj.mat']);  prenorm_traj_table = prenorm_traj_table.reach_pre_norm_traj_table;
+            reach_traj_table = calcVelAcc(prenorm_traj_table, reach_traj_table, 'acc', p);
+            save([p.PROC_DATA_FOLDER 'sub' num2str(iSub) p.DAY '_reach_traj_proc.mat'], 'reach_traj_table');
+        end
+        timing = num2str(toc);
+        disp(['Acceleration calc done. ' timing 'Sec']);
+
+
+        %% Sorting and averaging (within subject) - intermediate step
+        tic
+        for iTraj = 1:length(traj_names)
+            bad_trials = load([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
+            reach_bad_trials = bad_trials.reach_bad_trials;
+            keyboard_bad_trials = bad_trials.keyboard_bad_trials;
+            for iSub = p.SUBS
+                disp(iSub);
+                p = defineParams_within_round(p, iSub);
+                [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_names{iTraj}, reach_bad_trials, keyboard_bad_trials, pas_rate, p.NORMALIZE_WITHIN_SUB, p);
+                save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_sorted_trials_' traj_names{iTraj}{1} '.mat'], 'r_trial', 'k_trial');
+                save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_avg_' traj_names{iTraj}{1} '.mat'], 'r_avg', 'k_avg');
+            end
+        end
+        timing = num2str(toc);
+        disp(['Sorting and avging within sub done. ' timing 'Sec']);
+        %% Reach Area
+        % Area between left and right traj for con/incon condition.
+        tic
+        for iTraj = 1:length(traj_names)
+            reach_area.con = NaN(1,p.MAX_SUB);
+            reach_area.incon = NaN(1,p.MAX_SUB);
+            good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+            for iSub = good_subs
+                disp(iSub)
+                p = defineParams_within_round(p, iSub);
+                r_avg = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_avg_' traj_names{iTraj}{1} '.mat']);  r_avg = r_avg.r_avg;
+                reach_area.con(iSub) = calcReachArea(r_avg.traj.con_left, r_avg.traj.con_right, p);
+                reach_area.incon(iSub) = calcReachArea(r_avg.traj.incon_left, r_avg.traj.incon_right, p);
+            end
+            save([p.PROC_DATA_FOLDER 'reach_area_' traj_names{iTraj}{1} '_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'reach_area');
+        end
+        timing = num2str(toc);
+        disp(['Reach area calc done. ' timing 'Sec']);
 % % % %     %% d' computation
 % % % %     % Computes each var's d' (sensitivity) many times.
 % % % %     % Num iters.
@@ -554,20 +559,21 @@ end
 % % % %         disp([num2str(iIter) ' iterations of d prime calc done. ' timing 'Sec']);
 % % % %     end
 % % % %     save([p.PROC_DATA_FOLDER '/d_prime_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat'], 'r_d_prime', 'k_d_prime');
-% % % %     %% Velocity profile
-% % % %     tic
-% % % %     vel_dist = velProf(p);
-% % % %     save([p.PROC_DATA_FOLDER,'/vel_dist_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'vel_dist');
-% % % %     timing = num2str(toc);
-% % % %     disp(['Velocity profiling done. ' timing 'Sec']);
-% % % %     %% Sorting and averaging (between subjects)
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         [reach_subs_avg, keyboard_subs_avg] = avgBetween(traj_names{iTraj}, p);
-% % % %         save([p.PROC_DATA_FOLDER '/subs_avg_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_subs_avg', 'keyboard_subs_avg');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Sorting and avging between sub done. ' timing 'Sec']);
+
+        %% Velocity profile
+        tic
+        vel_dist = velProf(p);
+        save([p.PROC_DATA_FOLDER,'/vel_dist_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'vel_dist');
+        timing = num2str(toc);
+        disp(['Velocity profiling done. ' timing 'Sec']);
+        %% Sorting and averaging (between subjects)
+        tic
+        for iTraj = 1:length(traj_names)
+            [reach_subs_avg, keyboard_subs_avg] = avgBetween(traj_names{iTraj}, p);
+            save([p.PROC_DATA_FOLDER '/subs_avg_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_subs_avg', 'keyboard_subs_avg');
+        end
+        timing = num2str(toc);
+        disp(['Sorting and avging between sub done. ' timing 'Sec']);
 % % % %     %% FDA
 % % % %     tic
 % % % %     for iTraj = 1:length(traj_names)
@@ -576,236 +582,260 @@ end
 % % % %     end
 % % % %     timing = num2str(toc);
 % % % %     disp(['FDA calc done. ' timing 'Sec']);
-% % % %     %% Count trials for each condition
-% % % %     tic
-% % % %     for iTraj = 1:length(traj_names)
-% % % %         for iSub = p.SUBS
-% % % %             p = defineParams_within_round(p, iSub);
-% % % %             % Get trials stats for this sub.
-% % % %             single_trial = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_sorted_trials_' traj_names{iTraj}{1} '.mat']);
-% % % %             reach_single = single_trial.r_trial;
-% % % %             keyboard_single = single_trial.k_trial;
-% % % %             reach_num_trials(iSub).con_left  = size(reach_single.rt.con_left, 1);
-% % % %             reach_num_trials(iSub).con_right = size(reach_single.rt.con_right, 1);
-% % % %             reach_num_trials(iSub).incon_left  = size(reach_single.rt.incon_left, 1);
-% % % %             reach_num_trials(iSub).incon_right = size(reach_single.rt.incon_right, 1);
-% % % %             reach_num_trials(iSub).con = reach_num_trials(iSub).con_left + reach_num_trials(iSub).con_right;
-% % % %             reach_num_trials(iSub).incon = reach_num_trials(iSub).incon_left + reach_num_trials(iSub).incon_right;
-% % % %             keyboard_num_trials(iSub).con_left  = size(keyboard_single.rt.con_left, 1);
-% % % %             keyboard_num_trials(iSub).con_right = size(keyboard_single.rt.con_right, 1);
-% % % %             keyboard_num_trials(iSub).incon_left  = size(keyboard_single.rt.incon_left, 1);
-% % % %             keyboard_num_trials(iSub).incon_right = size(keyboard_single.rt.incon_right, 1);
-% % % %             keyboard_num_trials(iSub).con = keyboard_num_trials(iSub).con_left + keyboard_num_trials(iSub).con_right;
-% % % %             keyboard_num_trials(iSub).incon = keyboard_num_trials(iSub).incon_left + keyboard_num_trials(iSub).incon_right;
-% % % %         end
-% % % %         save([p.PROC_DATA_FOLDER '/num_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_num_trials', 'keyboard_num_trials');
-% % % %     end
-% % % %     timing = num2str(toc);
-% % % %     disp(['Counting trials in each condition done. ' timing 'Sec']);
-% % % %     %% Plotting params
-% % % %     disp("Started setting plotting params.");
-% % % %     close all;
-% % % % 
-% % % %     % Params to be defined by user.
-% % % %     plt_p.alpha_size = 0.05; % For confidence interval.
-% % % %     plt_p.n_perm = 10000; % Number of permutations for permutation and clustering procedure.
-% % % %     plt_p.x_as_func_of = "time"; % To plot X as a function of "time" or "zaxis".
-% % % %     plt_p.errbar_type = 'ci'; % Shade and error bar type: 'se', 'ci'. ci is only relevant when var distributes normally.
-% % % %     % Statistical params.
-% % % %     plt_p.n_perm_clust_tests = input("How many permutation+clustering tests do you have?");
-% % % %     % Plots appearance.
-% % % %     plt_p.avg_plot_width = 4;
-% % % %     plt_p.space = 3; % between beeswarm graphs.
-% % % %     plt_p.f_alpha = 0.2; % transperacy of shading.
-% % % %     plt_p.linewidth = 4; % Used for some graphs.
-% % % %     plt_p.con_col = [0 0.35294 0.7098];%[0 0.4470 0.7410 f_f_alpha];
-% % % %     plt_p.con_avg_col = 'b';
-% % % %     plt_p.incon_col = [0.86275 0.19608 0.12549];%[0.6350 0.0780 0.1840 f_f_alpha];
-% % % %     plt_p.incon_avg_col = 'r';
-% % % %     plt_p.reach_color = [225 225 225] / 255; % used when comparing exp 2 and 3.
-% % % %     plt_p.keyboard_color = [0 146 146] / 255;
-% % % %     plt_p.first_practice_color = [125 255 0] / 255;
-% % % %     plt_p.second_practice_color = [0 125 0] / 255;
-% % % %     plt_p.green_1 = [0.46667 0.85882 0.40392];
-% % % %     plt_p.green_2 = [0.56471 0.6902 0.37255];
-% % % %     plt_p.test_color = [240 240 30] / 255;
-% % % %     plt_p.axes_line_thickness = 3;
-% % % %     plt_p.time_ticks = [0.05 : 0.05 : p.MIN_SAMP_LEN] * 1000; % Ticks for the time axis in plots.
-% % % %     plt_p.percent_path_ticks = 10 : 20 : 100; % Ticks for the %path_traveled axis in plots.
-% % % %     plt_p.left_right_ticks = -10 : 5 : 10; % Ticks for the left/right axis in plots.
-% % % %     plt_p.font_name = 'Calibri';
-% % % %     plt_p.font_size = 17;
-% % % %     plt_p.labels_font_size = 14;
-% % % % 
-% % % %     % Load reach area.
-% % % %     reach_area = load([p.PROC_DATA_FOLDER 'reach_area_' traj_names{1}{1} '_' p.DAY '_subs_' p.SUBS_STRING '.mat']);  reach_area = reach_area.reach_area;
-% % % % 
-% % % %     % Unite all subs to one variable.
-% % % %     for iSub = p.SUBS
-% % % %         for iTraj = 1:length(traj_names)
-% % % %             avg = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_' 'avg_' traj_names{iTraj}{1} '.mat']);
-% % % %             r_avg = avg.r_avg;
-% % % %             k_avg = avg.k_avg;
-% % % %             % Seperate avg for left and right.
-% % % %             reach_avg_each.traj(iTraj).con_left(:,iSub,:) = r_avg.traj.con_left;
-% % % %             reach_avg_each.traj(iTraj).con_right(:,iSub,:) = r_avg.traj.con_right;
-% % % %             reach_avg_each.traj(iTraj).incon_left(:,iSub,:) = r_avg.traj.incon_left;
-% % % %             reach_avg_each.traj(iTraj).incon_right(:,iSub,:) = r_avg.traj.incon_right;
-% % % %             reach_avg_each.head_angle(iTraj).con_left(:,iSub) = r_avg.head_angle.con_left;
-% % % %             reach_avg_each.head_angle(iTraj).con_right(:,iSub) = r_avg.head_angle.con_right;
-% % % %             reach_avg_each.head_angle(iTraj).incon_left(:,iSub) = r_avg.head_angle.incon_left;
-% % % %             reach_avg_each.head_angle(iTraj).incon_right(:,iSub) = r_avg.head_angle.incon_right;
-% % % %             reach_avg_each.vel(iTraj).con_left(:,iSub) = r_avg.vel.con_left;
-% % % %             reach_avg_each.vel(iTraj).con_right(:,iSub) = r_avg.vel.con_right;
-% % % %             reach_avg_each.vel(iTraj).incon_left(:,iSub) = r_avg.vel.incon_left;
-% % % %             reach_avg_each.vel(iTraj).incon_right(:,iSub) = r_avg.vel.incon_right;
-% % % %             reach_avg_each.acc(iTraj).con_left(:,iSub) = r_avg.acc.con_left;
-% % % %             reach_avg_each.acc(iTraj).con_right(:,iSub) = r_avg.acc.con_right;
-% % % %             reach_avg_each.acc(iTraj).incon_left(:,iSub) = r_avg.acc.incon_left;
-% % % %             reach_avg_each.acc(iTraj).incon_right(:,iSub) = r_avg.acc.incon_right;
-% % % %             reach_avg_each.iep(iTraj).con_left(:,iSub) = r_avg.iep.con_left;
-% % % %             reach_avg_each.iep(iTraj).con_right(:,iSub) = r_avg.iep.con_right;
-% % % %             reach_avg_each.iep(iTraj).incon_left(:,iSub) = r_avg.iep.incon_left;
-% % % %             reach_avg_each.iep(iTraj).incon_right(:,iSub) = r_avg.iep.incon_right;
-% % % %             reach_avg_each.rt(iTraj).con_left(iSub)  = r_avg.rt.con_left * 1000;
-% % % %             reach_avg_each.rt(iTraj).con_right(iSub) = r_avg.rt.con_right * 1000;
-% % % %             reach_avg_each.rt(iTraj).incon_left(iSub)  = r_avg.rt.incon_left * 1000;
-% % % %             reach_avg_each.rt(iTraj).incon_right(iSub) = r_avg.rt.incon_right * 1000;
-% % % %             reach_avg_each.react(iTraj).con_left(iSub)  = r_avg.react.con_left * 1000;
-% % % %             reach_avg_each.react(iTraj).con_right(iSub) = r_avg.react.con_right * 1000;
-% % % %             reach_avg_each.react(iTraj).incon_left(iSub)  = r_avg.react.incon_left * 1000;
-% % % %             reach_avg_each.react(iTraj).incon_right(iSub) = r_avg.react.incon_right * 1000;
-% % % %             reach_avg_each.mt(iTraj).con_left(iSub)  = r_avg.mt.con_left * 1000;
-% % % %             reach_avg_each.mt(iTraj).con_right(iSub) = r_avg.mt.con_right * 1000;
-% % % %             reach_avg_each.mt(iTraj).incon_left(iSub)  = r_avg.mt.incon_left * 1000;
-% % % %             reach_avg_each.mt(iTraj).incon_right(iSub) = r_avg.mt.incon_right * 1000;
-% % % %             reach_avg_each.mad(iTraj).con_left(iSub)  = r_avg.mad.con_left;
-% % % %             reach_avg_each.mad(iTraj).con_right(iSub) = r_avg.mad.con_right;
-% % % %             reach_avg_each.mad(iTraj).incon_left(iSub)  = r_avg.mad.incon_left;
-% % % %             reach_avg_each.mad(iTraj).incon_right(iSub) = r_avg.mad.incon_right;
-% % % %             % URI - adding mad_z
-% % % %             reach_avg_each.mad_z(iTraj).con_left(iSub)  = r_avg.mad_z.con_left;
-% % % %             reach_avg_each.mad_z(iTraj).con_right(iSub) = r_avg.mad_z.con_right;
-% % % %             reach_avg_each.mad_z(iTraj).incon_left(iSub)  = r_avg.mad_z.incon_left;
-% % % %             reach_avg_each.mad_z(iTraj).incon_right(iSub) = r_avg.mad_z.incon_right;
-% % % %             % /URI
-% % % %             reach_avg_each.com(iTraj).con_left(iSub)  = r_avg.com.con_left;
-% % % %             reach_avg_each.com(iTraj).con_right(iSub) = r_avg.com.con_right;
-% % % %             reach_avg_each.com(iTraj).incon_left(iSub)  = r_avg.com.incon_left;
-% % % %             reach_avg_each.com(iTraj).incon_right(iSub) = r_avg.com.incon_right;
-% % % %             reach_avg_each.tot_dist(iTraj).con_left(iSub)  = r_avg.tot_dist.con_left;
-% % % %             reach_avg_each.tot_dist(iTraj).con_right(iSub) = r_avg.tot_dist.con_right;
-% % % %             reach_avg_each.tot_dist(iTraj).incon_left(iSub)  = r_avg.tot_dist.incon_left;
-% % % %             reach_avg_each.tot_dist(iTraj).incon_right(iSub) = r_avg.tot_dist.incon_right;
-% % % %             reach_avg_each.auc(iTraj).con_left(iSub)  = r_avg.auc.con_left;
-% % % %             reach_avg_each.auc(iTraj).con_right(iSub) = r_avg.auc.con_right;
-% % % %             reach_avg_each.auc(iTraj).incon_left(iSub)  = r_avg.auc.incon_left;
-% % % %             reach_avg_each.auc(iTraj).incon_right(iSub) = r_avg.auc.incon_right;
-% % % %             reach_avg_each.max_vel(iTraj).con_left(iSub)  = r_avg.max_vel.con_left;
-% % % %             reach_avg_each.max_vel(iTraj).con_right(iSub) = r_avg.max_vel.con_right;
-% % % %             reach_avg_each.max_vel(iTraj).incon_left(iSub)  = r_avg.max_vel.incon_left;
-% % % %             reach_avg_each.max_vel(iTraj).incon_right(iSub) = r_avg.max_vel.incon_right;
-% % % %             reach_avg_each.x_std(iTraj).con_left(:,iSub)  = r_avg.x_std.con_left;
-% % % %             reach_avg_each.x_std(iTraj).con_right(:,iSub) = r_avg.x_std.con_right;
-% % % %             reach_avg_each.x_std(iTraj).incon_left(:,iSub)  = r_avg.x_std.incon_left;
-% % % %             reach_avg_each.x_std(iTraj).incon_right(:,iSub) = r_avg.x_std.incon_right;
-% % % %             reach_avg_each.cond_diff(iTraj).left(:,iSub,:)  = r_avg.cond_diff.left;
-% % % %             reach_avg_each.cond_diff(iTraj).right(:,iSub,:) = r_avg.cond_diff.right;
-% % % %             keyboard_avg_each.rt(iTraj).con_left(iSub)  = k_avg.rt.con_left * 1000;
-% % % %             keyboard_avg_each.rt(iTraj).con_right(iSub) = k_avg.rt.con_right * 1000;
-% % % %             keyboard_avg_each.rt(iTraj).incon_left(iSub)  = k_avg.rt.incon_left * 1000;
-% % % %             keyboard_avg_each.rt(iTraj).incon_right(iSub) = k_avg.rt.incon_right * 1000;
-% % % %             keyboard_avg_each.rt_std(iTraj).con_left(iSub)  = k_avg.rt_std.con_left;
-% % % %             keyboard_avg_each.rt_std(iTraj).con_right(iSub) = k_avg.rt_std.con_right;
-% % % %             keyboard_avg_each.rt_std(iTraj).incon_left(iSub)  = k_avg.rt_std.incon_left;
-% % % %             keyboard_avg_each.rt_std(iTraj).incon_right(iSub) = k_avg.rt_std.incon_right;
-% % % %             % Combined avg of left and right.
-% % % %             reach_avg_each.traj(iTraj).con(:, iSub, :) = r_avg.traj.con;
-% % % %             reach_avg_each.traj(iTraj).incon(:, iSub, :) = r_avg.traj.incon;
-% % % %             reach_avg_each.head_angle(iTraj).con(:, iSub) = r_avg.head_angle.con;
-% % % %             reach_avg_each.head_angle(iTraj).incon(:, iSub) = r_avg.head_angle.incon;
-% % % %             reach_avg_each.vel(iTraj).con(:, iSub) = r_avg.vel.con;
-% % % %             reach_avg_each.vel(iTraj).incon(:, iSub) = r_avg.vel.incon;
-% % % %             reach_avg_each.acc(iTraj).con(:, iSub) = r_avg.acc.con;
-% % % %             reach_avg_each.acc(iTraj).incon(:, iSub) = r_avg.acc.incon;
-% % % %             reach_avg_each.iep(iTraj).con(:, iSub) = r_avg.iep.con;
-% % % %             reach_avg_each.iep(iTraj).incon(:, iSub) = r_avg.iep.incon;
-% % % %             % URI - check normalization flag, only if off then multiply time 
-% % % %             % variables by 1000 to get ms:
-% % % %             if(p.NORMALIZE_WITHIN_SUB)
-% % % %                 timeMultFactor = 1;
-% % % %             else
-% % % %                 timeMultFactor = 1000;
-% % % %             end
-% % % %             reach_avg_each.rt(iTraj).con(iSub) = r_avg.rt.con * timeMultFactor;
-% % % %             reach_avg_each.rt(iTraj).incon(iSub) = r_avg.rt.incon * timeMultFactor;
-% % % %             reach_avg_each.react(iTraj).con(iSub) = r_avg.react.con * timeMultFactor;
-% % % %             reach_avg_each.react(iTraj).incon(iSub) = r_avg.react.incon * timeMultFactor;
-% % % %             reach_avg_each.mt(iTraj).con(iSub) = r_avg.mt.con * timeMultFactor;
-% % % %             reach_avg_each.mt(iTraj).incon(iSub) = r_avg.mt.incon * timeMultFactor;
-% % % %             reach_avg_each.mad(iTraj).con(iSub) = r_avg.mad.con;
-% % % %             reach_avg_each.mad(iTraj).incon(iSub) = r_avg.mad.incon;
-% % % %             % URI - adding mad_z:
-% % % %             reach_avg_each.mad_z(iTraj).con(iSub) = r_avg.mad_z.con;
-% % % %             reach_avg_each.mad_z(iTraj).incon(iSub) = r_avg.mad_z.incon;
-% % % %             % /URI
-% % % %             reach_avg_each.com(iTraj).con(iSub) = r_avg.com.con;
-% % % %             reach_avg_each.com(iTraj).incon(iSub) = r_avg.com.incon;
-% % % %             reach_avg_each.tot_dist(iTraj).con(iSub) = r_avg.tot_dist.con;
-% % % %             reach_avg_each.tot_dist(iTraj).incon(iSub) = r_avg.tot_dist.incon;
-% % % %             reach_avg_each.auc(iTraj).con(iSub) = r_avg.auc.con;
-% % % %             reach_avg_each.auc(iTraj).incon(iSub) = r_avg.auc.incon;
-% % % %             reach_avg_each.max_vel(iTraj).con(iSub) = r_avg.max_vel.con;
-% % % %             reach_avg_each.max_vel(iTraj).incon(iSub) = r_avg.max_vel.incon;
-% % % %             reach_avg_each.x_std(iTraj).con(:, iSub) = r_avg.x_std.con;
-% % % %             reach_avg_each.x_std(iTraj).incon(:, iSub) = r_avg.x_std.incon;
-% % % %             reach_avg_each.ra(iTraj).con(iSub) = reach_area.con(iSub);
-% % % %             reach_avg_each.ra(iTraj).incon(iSub) = reach_area.incon(iSub);
-% % % %             reach_avg_each.pas(iTraj).con(iSub,:) = r_avg.pas.con;
-% % % %             reach_avg_each.pas(iTraj).incon(iSub,:) = r_avg.pas.incon;
-% % % %             % URI - check normalization flag, only if off then multiply time 
-% % % %             % variables by 1000 to get ms:
-% % % %             if(p.NORMALIZE_WITHIN_SUB)
-% % % %                 timeMultFactor = 1;
-% % % %             else
-% % % %                 timeMultFactor = 1000;
-% % % %             end
-% % % %             keyboard_avg_each.rt(iTraj).con(iSub) = k_avg.rt.con * timeMultFactor;
-% % % %             keyboard_avg_each.rt(iTraj).incon(iSub) = k_avg.rt.incon * timeMultFactor;
-% % % %             keyboard_avg_each.rt_std(iTraj).con(iSub) = k_avg.rt_std.con;
-% % % %             keyboard_avg_each.rt_std(iTraj).incon(iSub) = k_avg.rt_std.incon;
-% % % %             keyboard_avg_each.pas(iTraj).con(iSub,:) = k_avg.pas.con;
-% % % %             keyboard_avg_each.pas(iTraj).incon(iSub,:) = k_avg.pas.incon;
-% % % %             % Compute diff between conditions (con/incon).
-% % % %             reach_avg_each.rt(iTraj).diff(iSub)  = mean([r_avg.rt.con_left - r_avg.rt.incon_left,...
-% % % %                                                     r_avg.rt.con_right - r_avg.rt.incon_right]) * 1000;
-% % % %             reach_avg_each.react(iTraj).diff(iSub)  = mean([r_avg.react.con_left - r_avg.react.incon_left,...
-% % % %                                                     r_avg.react.con_right - r_avg.react.incon_right]) * 1000;
-% % % %             reach_avg_each.mt(iTraj).diff(iSub)  = mean([r_avg.mt.con_left - r_avg.mt.incon_left,...
-% % % %                                                     r_avg.mt.con_right - r_avg.mt.incon_right]) * 1000;
-% % % %             reach_avg_each.mad(iTraj).diff(iSub)  = mean([r_avg.mad.con_left - r_avg.mad.incon_left,...
-% % % %                                                     r_avg.mad.con_right - r_avg.mad.incon_right]);
-% % % %             % URI - adding mad_z:
-% % % %             reach_avg_each.mad_z(iTraj).diff(iSub)  = mean([r_avg.mad_z.con_left - r_avg.mad_z.incon_left,...
-% % % %                                                     r_avg.mad_z.con_right - r_avg.mad_z.incon_right]);
-% % % %             % /URI
-% % % %             reach_avg_each.x_dev(iTraj).diff(:,iSub) = mean([-1 * (r_avg.traj.con_left(:,1) - r_avg.traj.incon_left(:,1)),...
-% % % %                                                         (r_avg.traj.con_right(:,1) - r_avg.traj.incon_right(:,1))],...
-% % % %                                                         2);
-% % % %             reach_avg_each.x_std(iTraj).diff(:,iSub) = mean([r_avg.x_std.con_left - r_avg.x_std.incon_left,...
-% % % %                                                         r_avg.x_std.con_right - r_avg.x_std.incon_right],...
-% % % %                                                         2);
-% % % %             reach_avg_each.ra(iTraj).diff(iSub) = reach_area.con(iSub) - reach_area.incon(iSub);
-% % % %             keyboard_avg_each.rt(iTraj).diff(iSub)  = mean([k_avg.rt.con_left - k_avg.rt.incon_left,...
-% % % %                                                     k_avg.rt.con_right - k_avg.rt.incon_right]) * 1000;
-% % % %         end
-% % % %         reach_avg_each.fc_prime.con(iSub) = r_avg.fc_prime.con;
-% % % %         reach_avg_each.fc_prime.incon(iSub) = r_avg.fc_prime.incon;
-% % % %         keyboard_avg_each.fc_prime.con(iSub) = k_avg.fc_prime.con;
-% % % %         keyboard_avg_each.fc_prime.incon(iSub) = k_avg.fc_prime.incon;
-% % % %     end
-% % % %     save([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_avg_each', 'keyboard_avg_each');
-% % % %     disp("Done setting plotting params.");
+
+        %% Count trials for each condition
+        tic
+        for iTraj = 1:length(traj_names)
+            for iSub = p.SUBS
+                p = defineParams_within_round(p, iSub);
+                % Get trials stats for this sub.
+                single_trial = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_sorted_trials_' traj_names{iTraj}{1} '.mat']);
+                reach_single = single_trial.r_trial;
+                keyboard_single = single_trial.k_trial;
+                reach_num_trials(iSub).con_left  = size(reach_single.rt.con_left, 1);
+                reach_num_trials(iSub).con_right = size(reach_single.rt.con_right, 1);
+                reach_num_trials(iSub).incon_left  = size(reach_single.rt.incon_left, 1);
+                reach_num_trials(iSub).incon_right = size(reach_single.rt.incon_right, 1);
+                reach_num_trials(iSub).con = reach_num_trials(iSub).con_left + reach_num_trials(iSub).con_right;
+                reach_num_trials(iSub).incon = reach_num_trials(iSub).incon_left + reach_num_trials(iSub).incon_right;
+                keyboard_num_trials(iSub).con_left  = size(keyboard_single.rt.con_left, 1);
+                keyboard_num_trials(iSub).con_right = size(keyboard_single.rt.con_right, 1);
+                keyboard_num_trials(iSub).incon_left  = size(keyboard_single.rt.incon_left, 1);
+                keyboard_num_trials(iSub).incon_right = size(keyboard_single.rt.incon_right, 1);
+                keyboard_num_trials(iSub).con = keyboard_num_trials(iSub).con_left + keyboard_num_trials(iSub).con_right;
+                keyboard_num_trials(iSub).incon = keyboard_num_trials(iSub).incon_left + keyboard_num_trials(iSub).incon_right;
+            end
+            save([p.PROC_DATA_FOLDER '/num_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_num_trials', 'keyboard_num_trials');
+        end
+        timing = num2str(toc);
+        disp(['Counting trials in each condition done. ' timing 'Sec']);
+
+    else % Analysis not done from raw data, but from pre-prepared processed data:
+        fprintf('Analysis done using pre-made processed data, continuing with the files in folder: %s\n', p.PROC_DATA_FOLDER)
+    end % /Pre-process data
+%
+%
+%
+%
+%
+    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %                                                %
+    % Gather averages and analyze group-level stats: %
+    %                                                %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+    %% Plotting params
+    disp("Started setting plotting params.");
+    close all;
+
+    % Params to be defined by user.
+    plt_p.alpha_size = 0.05; % For confidence interval.
+    plt_p.n_perm = 10000; % Number of permutations for permutation and clustering procedure.
+    plt_p.x_as_func_of = "time"; % To plot X as a function of "time" or "zaxis".
+    plt_p.errbar_type = 'ci'; % Shade and error bar type: 'se', 'ci'. ci is only relevant when var distributes normally.
+    % Statistical params.
+    plt_p.n_perm_clust_tests = 1;%input("How many permutation+clustering tests do you have?");
+    % Plots appearance.
+    plt_p.avg_plot_width = 4;
+    plt_p.space = 3; % between beeswarm graphs.
+    plt_p.f_alpha = 0.2; % transperacy of shading.
+    plt_p.linewidth = 4; % Used for some graphs.
+    plt_p.con_col = [0 0.35294 0.7098];%[0 0.4470 0.7410 f_f_alpha];
+    plt_p.con_avg_col = 'b';
+    plt_p.incon_col = [0.86275 0.19608 0.12549];%[0.6350 0.0780 0.1840 f_f_alpha];
+    plt_p.incon_avg_col = 'r';
+    plt_p.reach_color = [225 225 225] / 255; % used when comparing exp 2 and 3.
+    plt_p.keyboard_color = [0 146 146] / 255;
+    plt_p.first_practice_color = [125 255 0] / 255;
+    plt_p.second_practice_color = [0 125 0] / 255;
+    plt_p.green_1 = [0.46667 0.85882 0.40392];
+    plt_p.green_2 = [0.56471 0.6902 0.37255];
+    plt_p.test_color = [240 240 30] / 255;
+    plt_p.axes_line_thickness = 3;
+    plt_p.time_ticks = [0.05 : 0.05 : p.MIN_SAMP_LEN] * 1000; % Ticks for the time axis in plots.
+    plt_p.percent_path_ticks = 10 : 20 : 100; % Ticks for the %path_traveled axis in plots.
+    plt_p.left_right_ticks = -10 : 5 : 10; % Ticks for the left/right axis in plots.
+    plt_p.font_name = 'Calibri';
+    plt_p.font_size = 17;
+    plt_p.labels_font_size = 14;
+
+    %% Gathering data to be plotted into one data structure
+    % Load reach area.
+    reach_area = load([p.PROC_DATA_FOLDER 'reach_area_' traj_names{1}{1} '_' p.DAY '_subs_' p.SUBS_STRING '.mat']);  reach_area = reach_area.reach_area;
+
+    % Unite all subs to one variable.
+    for iSub = p.SUBS
+        for iTraj = 1:length(traj_names)
+            avg = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_' 'avg_' traj_names{iTraj}{1} '.mat']);
+            r_avg = avg.r_avg;
+            k_avg = avg.k_avg;
+            % Seperate avg for left and right.
+            reach_avg_each.traj(iTraj).con_left(:,iSub,:) = r_avg.traj.con_left;
+            reach_avg_each.traj(iTraj).con_right(:,iSub,:) = r_avg.traj.con_right;
+            reach_avg_each.traj(iTraj).incon_left(:,iSub,:) = r_avg.traj.incon_left;
+            reach_avg_each.traj(iTraj).incon_right(:,iSub,:) = r_avg.traj.incon_right;
+            reach_avg_each.head_angle(iTraj).con_left(:,iSub) = r_avg.head_angle.con_left;
+            reach_avg_each.head_angle(iTraj).con_right(:,iSub) = r_avg.head_angle.con_right;
+            reach_avg_each.head_angle(iTraj).incon_left(:,iSub) = r_avg.head_angle.incon_left;
+            reach_avg_each.head_angle(iTraj).incon_right(:,iSub) = r_avg.head_angle.incon_right;
+            reach_avg_each.vel(iTraj).con_left(:,iSub) = r_avg.vel.con_left;
+            reach_avg_each.vel(iTraj).con_right(:,iSub) = r_avg.vel.con_right;
+            reach_avg_each.vel(iTraj).incon_left(:,iSub) = r_avg.vel.incon_left;
+            reach_avg_each.vel(iTraj).incon_right(:,iSub) = r_avg.vel.incon_right;
+            reach_avg_each.acc(iTraj).con_left(:,iSub) = r_avg.acc.con_left;
+            reach_avg_each.acc(iTraj).con_right(:,iSub) = r_avg.acc.con_right;
+            reach_avg_each.acc(iTraj).incon_left(:,iSub) = r_avg.acc.incon_left;
+            reach_avg_each.acc(iTraj).incon_right(:,iSub) = r_avg.acc.incon_right;
+            reach_avg_each.iep(iTraj).con_left(:,iSub) = r_avg.iep.con_left;
+            reach_avg_each.iep(iTraj).con_right(:,iSub) = r_avg.iep.con_right;
+            reach_avg_each.iep(iTraj).incon_left(:,iSub) = r_avg.iep.incon_left;
+            reach_avg_each.iep(iTraj).incon_right(:,iSub) = r_avg.iep.incon_right;
+            reach_avg_each.rt(iTraj).con_left(iSub)  = r_avg.rt.con_left * 1000;
+            reach_avg_each.rt(iTraj).con_right(iSub) = r_avg.rt.con_right * 1000;
+            reach_avg_each.rt(iTraj).incon_left(iSub)  = r_avg.rt.incon_left * 1000;
+            reach_avg_each.rt(iTraj).incon_right(iSub) = r_avg.rt.incon_right * 1000;
+            reach_avg_each.react(iTraj).con_left(iSub)  = r_avg.react.con_left * 1000;
+            reach_avg_each.react(iTraj).con_right(iSub) = r_avg.react.con_right * 1000;
+            reach_avg_each.react(iTraj).incon_left(iSub)  = r_avg.react.incon_left * 1000;
+            reach_avg_each.react(iTraj).incon_right(iSub) = r_avg.react.incon_right * 1000;
+            reach_avg_each.mt(iTraj).con_left(iSub)  = r_avg.mt.con_left * 1000;
+            reach_avg_each.mt(iTraj).con_right(iSub) = r_avg.mt.con_right * 1000;
+            reach_avg_each.mt(iTraj).incon_left(iSub)  = r_avg.mt.incon_left * 1000;
+            reach_avg_each.mt(iTraj).incon_right(iSub) = r_avg.mt.incon_right * 1000;
+            reach_avg_each.mad(iTraj).con_left(iSub)  = r_avg.mad.con_left;
+            reach_avg_each.mad(iTraj).con_right(iSub) = r_avg.mad.con_right;
+            reach_avg_each.mad(iTraj).incon_left(iSub)  = r_avg.mad.incon_left;
+            reach_avg_each.mad(iTraj).incon_right(iSub) = r_avg.mad.incon_right;
+            % URI - adding mad_z
+            if(p.NORMALIZE_WITHIN_SUB)
+                reach_avg_each.mad_z(iTraj).con_left(iSub)  = r_avg.mad_z.con_left;
+                reach_avg_each.mad_z(iTraj).con_right(iSub) = r_avg.mad_z.con_right;
+                reach_avg_each.mad_z(iTraj).incon_left(iSub)  = r_avg.mad_z.incon_left;
+                reach_avg_each.mad_z(iTraj).incon_right(iSub) = r_avg.mad_z.incon_right;
+            end
+            % /URI
+            reach_avg_each.com(iTraj).con_left(iSub)  = r_avg.com.con_left;
+            reach_avg_each.com(iTraj).con_right(iSub) = r_avg.com.con_right;
+            reach_avg_each.com(iTraj).incon_left(iSub)  = r_avg.com.incon_left;
+            reach_avg_each.com(iTraj).incon_right(iSub) = r_avg.com.incon_right;
+            reach_avg_each.tot_dist(iTraj).con_left(iSub)  = r_avg.tot_dist.con_left;
+            reach_avg_each.tot_dist(iTraj).con_right(iSub) = r_avg.tot_dist.con_right;
+            reach_avg_each.tot_dist(iTraj).incon_left(iSub)  = r_avg.tot_dist.incon_left;
+            reach_avg_each.tot_dist(iTraj).incon_right(iSub) = r_avg.tot_dist.incon_right;
+            reach_avg_each.auc(iTraj).con_left(iSub)  = r_avg.auc.con_left;
+            reach_avg_each.auc(iTraj).con_right(iSub) = r_avg.auc.con_right;
+            reach_avg_each.auc(iTraj).incon_left(iSub)  = r_avg.auc.incon_left;
+            reach_avg_each.auc(iTraj).incon_right(iSub) = r_avg.auc.incon_right;
+            reach_avg_each.max_vel(iTraj).con_left(iSub)  = r_avg.max_vel.con_left;
+            reach_avg_each.max_vel(iTraj).con_right(iSub) = r_avg.max_vel.con_right;
+            reach_avg_each.max_vel(iTraj).incon_left(iSub)  = r_avg.max_vel.incon_left;
+            reach_avg_each.max_vel(iTraj).incon_right(iSub) = r_avg.max_vel.incon_right;
+            reach_avg_each.x_std(iTraj).con_left(:,iSub)  = r_avg.x_std.con_left;
+            reach_avg_each.x_std(iTraj).con_right(:,iSub) = r_avg.x_std.con_right;
+            reach_avg_each.x_std(iTraj).incon_left(:,iSub)  = r_avg.x_std.incon_left;
+            reach_avg_each.x_std(iTraj).incon_right(:,iSub) = r_avg.x_std.incon_right;
+            reach_avg_each.cond_diff(iTraj).left(:,iSub,:)  = r_avg.cond_diff.left;
+            reach_avg_each.cond_diff(iTraj).right(:,iSub,:) = r_avg.cond_diff.right;
+            keyboard_avg_each.rt(iTraj).con_left(iSub)  = k_avg.rt.con_left * 1000;
+            keyboard_avg_each.rt(iTraj).con_right(iSub) = k_avg.rt.con_right * 1000;
+            keyboard_avg_each.rt(iTraj).incon_left(iSub)  = k_avg.rt.incon_left * 1000;
+            keyboard_avg_each.rt(iTraj).incon_right(iSub) = k_avg.rt.incon_right * 1000;
+            keyboard_avg_each.rt_std(iTraj).con_left(iSub)  = k_avg.rt_std.con_left;
+            keyboard_avg_each.rt_std(iTraj).con_right(iSub) = k_avg.rt_std.con_right;
+            keyboard_avg_each.rt_std(iTraj).incon_left(iSub)  = k_avg.rt_std.incon_left;
+            keyboard_avg_each.rt_std(iTraj).incon_right(iSub) = k_avg.rt_std.incon_right;
+            % Combined avg of left and right.
+            reach_avg_each.traj(iTraj).con(:, iSub, :) = r_avg.traj.con;
+            reach_avg_each.traj(iTraj).incon(:, iSub, :) = r_avg.traj.incon;
+            reach_avg_each.head_angle(iTraj).con(:, iSub) = r_avg.head_angle.con;
+            reach_avg_each.head_angle(iTraj).incon(:, iSub) = r_avg.head_angle.incon;
+            reach_avg_each.vel(iTraj).con(:, iSub) = r_avg.vel.con;
+            reach_avg_each.vel(iTraj).incon(:, iSub) = r_avg.vel.incon;
+            reach_avg_each.acc(iTraj).con(:, iSub) = r_avg.acc.con;
+            reach_avg_each.acc(iTraj).incon(:, iSub) = r_avg.acc.incon;
+            reach_avg_each.iep(iTraj).con(:, iSub) = r_avg.iep.con;
+            reach_avg_each.iep(iTraj).incon(:, iSub) = r_avg.iep.incon;
+            % URI - check normalization flag, only if off then multiply time 
+            % variables by 1000 to get ms:
+            if(p.NORMALIZE_WITHIN_SUB)
+                timeMultFactor = 1;
+            else
+                timeMultFactor = 1000;
+            end
+            reach_avg_each.rt(iTraj).con(iSub) = r_avg.rt.con * timeMultFactor;
+            reach_avg_each.rt(iTraj).incon(iSub) = r_avg.rt.incon * timeMultFactor;
+            reach_avg_each.react(iTraj).con(iSub) = r_avg.react.con * timeMultFactor;
+            reach_avg_each.react(iTraj).incon(iSub) = r_avg.react.incon * timeMultFactor;
+            reach_avg_each.mt(iTraj).con(iSub) = r_avg.mt.con * timeMultFactor;
+            reach_avg_each.mt(iTraj).incon(iSub) = r_avg.mt.incon * timeMultFactor;
+            reach_avg_each.mad(iTraj).con(iSub) = r_avg.mad.con;
+            reach_avg_each.mad(iTraj).incon(iSub) = r_avg.mad.incon;
+            % URI - adding mad_z:
+            if (p.NORMALIZE_WITHIN_SUB)
+                reach_avg_each.mad_z(iTraj).con(iSub) = r_avg.mad_z.con;
+                reach_avg_each.mad_z(iTraj).incon(iSub) = r_avg.mad_z.incon;
+            end
+            % /URI
+            reach_avg_each.com(iTraj).con(iSub) = r_avg.com.con;
+            reach_avg_each.com(iTraj).incon(iSub) = r_avg.com.incon;
+            reach_avg_each.tot_dist(iTraj).con(iSub) = r_avg.tot_dist.con;
+            reach_avg_each.tot_dist(iTraj).incon(iSub) = r_avg.tot_dist.incon;
+            reach_avg_each.auc(iTraj).con(iSub) = r_avg.auc.con;
+            reach_avg_each.auc(iTraj).incon(iSub) = r_avg.auc.incon;
+            reach_avg_each.max_vel(iTraj).con(iSub) = r_avg.max_vel.con;
+            reach_avg_each.max_vel(iTraj).incon(iSub) = r_avg.max_vel.incon;
+            reach_avg_each.x_std(iTraj).con(:, iSub) = r_avg.x_std.con;
+            reach_avg_each.x_std(iTraj).incon(:, iSub) = r_avg.x_std.incon;
+            reach_avg_each.ra(iTraj).con(iSub) = reach_area.con(iSub);
+            reach_avg_each.ra(iTraj).incon(iSub) = reach_area.incon(iSub);
+            reach_avg_each.pas(iTraj).con(iSub,:) = r_avg.pas.con;
+            reach_avg_each.pas(iTraj).incon(iSub,:) = r_avg.pas.incon;
+            % URI - check normalization flag, only if off then multiply time 
+            % variables by 1000 to get ms:
+            if(p.NORMALIZE_WITHIN_SUB)
+                timeMultFactor = 1;
+            else
+                timeMultFactor = 1000;
+            end
+            keyboard_avg_each.rt(iTraj).con(iSub) = k_avg.rt.con * timeMultFactor;
+            keyboard_avg_each.rt(iTraj).incon(iSub) = k_avg.rt.incon * timeMultFactor;
+            keyboard_avg_each.rt_std(iTraj).con(iSub) = k_avg.rt_std.con;
+            keyboard_avg_each.rt_std(iTraj).incon(iSub) = k_avg.rt_std.incon;
+            keyboard_avg_each.pas(iTraj).con(iSub,:) = k_avg.pas.con;
+            keyboard_avg_each.pas(iTraj).incon(iSub,:) = k_avg.pas.incon;
+            % Compute diff between conditions (con/incon).
+            reach_avg_each.rt(iTraj).diff(iSub)  = mean([r_avg.rt.con_left - r_avg.rt.incon_left,...
+                                                    r_avg.rt.con_right - r_avg.rt.incon_right]) * 1000;
+            reach_avg_each.react(iTraj).diff(iSub)  = mean([r_avg.react.con_left - r_avg.react.incon_left,...
+                                                    r_avg.react.con_right - r_avg.react.incon_right]) * 1000;
+            reach_avg_each.mt(iTraj).diff(iSub)  = mean([r_avg.mt.con_left - r_avg.mt.incon_left,...
+                                                    r_avg.mt.con_right - r_avg.mt.incon_right]) * 1000;
+            reach_avg_each.mad(iTraj).diff(iSub)  = mean([r_avg.mad.con_left - r_avg.mad.incon_left,...
+                                                    r_avg.mad.con_right - r_avg.mad.incon_right]);
+            % URI - adding mad_z:
+            if (p.NORMALIZE_WITHIN_SUB)
+                reach_avg_each.mad_z(iTraj).diff(iSub)  = mean([r_avg.mad_z.con_left - r_avg.mad_z.incon_left,...
+                                                        r_avg.mad_z.con_right - r_avg.mad_z.incon_right]);
+            end
+            % /URI
+            reach_avg_each.x_dev(iTraj).diff(:,iSub) = mean([-1 * (r_avg.traj.con_left(:,1) - r_avg.traj.incon_left(:,1)),...
+                                                        (r_avg.traj.con_right(:,1) - r_avg.traj.incon_right(:,1))],...
+                                                        2);
+            reach_avg_each.x_std(iTraj).diff(:,iSub) = mean([r_avg.x_std.con_left - r_avg.x_std.incon_left,...
+                                                        r_avg.x_std.con_right - r_avg.x_std.incon_right],...
+                                                        2);
+            reach_avg_each.ra(iTraj).diff(iSub) = reach_area.con(iSub) - reach_area.incon(iSub);
+            keyboard_avg_each.rt(iTraj).diff(iSub)  = mean([k_avg.rt.con_left - k_avg.rt.incon_left,...
+                                                    k_avg.rt.con_right - k_avg.rt.incon_right]) * 1000;
+        end
+        reach_avg_each.fc_prime.con(iSub) = r_avg.fc_prime.con;
+        reach_avg_each.fc_prime.incon(iSub) = r_avg.fc_prime.incon;
+        keyboard_avg_each.fc_prime.con(iSub) = k_avg.fc_prime.con;
+        keyboard_avg_each.fc_prime.incon(iSub) = k_avg.fc_prime.incon;
+    end
+    save([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_avg_each', 'keyboard_avg_each');
+    disp("Done setting plotting params.");
 % % % %     %% Single Sub plots.
 % % % %     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 % % % %     subs_to_present = good_subs([5,10]);
@@ -1533,3 +1563,4 @@ end
 % % % %     plotTreeBH_hardCodedValues_URI(plt_p, p);
 % % % % 
 % % % % end
+end

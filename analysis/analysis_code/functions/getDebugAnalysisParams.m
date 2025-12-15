@@ -6,7 +6,7 @@ arguments (Output)
 end
 
 prms = struct();
-prms.fromRawData = true;
+prms.fromRawData = false;
 prms.rawDataFolder = '../../../raw_data_from_OSF/';
 
 prms.readyPreProcData_noTrajNorm_noStandardization_folder = '../processed_data/nonStandardized_nonTrajNorm/';

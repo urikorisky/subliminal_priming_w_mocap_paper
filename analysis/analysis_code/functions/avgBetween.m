@@ -15,7 +15,9 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
     r_subs_avg.mt        = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     r_subs_avg.mad       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     % URI - Adding the mad_z calculation:
-    r_subs_avg.mad_z       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
+    if(p.NORMALIZE_WITHIN_SUB)
+        r_subs_avg.mad_z       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
+    end
     r_subs_avg.mad_p     = struct('con_left',[0 0 0], 'con_right',[0 0 0], 'incon_left',[0 0 0], 'incon_right',[0 0 0]);
     r_subs_avg.com       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     r_subs_avg.tot_dist  = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
@@ -35,7 +37,7 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
     n_good_subs = length(good_subs);
     
     for iSub = good_subs
-        p = defineParams_URI_EDIT(p, iSub);
+        p = defineParams_within_round(p, iSub);
         % load avg within subject.
         avg = load([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_' 'avg_' traj_name{1}]);  r_avg = avg.r_avg; k_avg = avg.k_avg;
         % sum to calc avg between subjects.
@@ -51,7 +53,9 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
         r_subs_avg.mt        = sortedSum(r_subs_avg.mt, r_avg.mt);
         r_subs_avg.mad       = sortedSum(r_subs_avg.mad, r_avg.mad);
         % URI - Adding the mad_z calculation:
-        r_subs_avg.mad_z       = sortedSum(r_subs_avg.mad_z, r_avg.mad_z);
+        if(p.NORMALIZE_WITHIN_SUB)
+            r_subs_avg.mad_z = sortedSum(r_subs_avg.mad_z, r_avg.mad_z);
+        end
         r_subs_avg.mad_p     = sortedSum(r_subs_avg.mad_p, r_avg.mad_p);
         r_subs_avg.com       = sortedSum(r_subs_avg.com, r_avg.com);
         r_subs_avg.tot_dist  = sortedSum(r_subs_avg.tot_dist, r_avg.tot_dist);
@@ -81,7 +85,9 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
     r_subs_avg.mt        = divideByNumOfSubs(r_subs_avg.mt, n_good_subs);
     r_subs_avg.mad       = divideByNumOfSubs(r_subs_avg.mad, n_good_subs);
     % URI - Adding the mad_z calculation:
-    r_subs_avg.mad       = divideByNumOfSubs(r_subs_avg.mad_z, n_good_subs);
+    if(p.NORMALIZE_WITHIN_SUB)
+        r_subs_avg.mad       = divideByNumOfSubs(r_subs_avg.mad_z, n_good_subs);
+    end
     r_subs_avg.mad_p     = divideByNumOfSubs(r_subs_avg.mad_p, n_good_subs);
     r_subs_avg.com       = divideByNumOfSubs(r_subs_avg.com, n_good_subs);
     r_subs_avg.tot_dist  = divideByNumOfSubs(r_subs_avg.tot_dist, n_good_subs);

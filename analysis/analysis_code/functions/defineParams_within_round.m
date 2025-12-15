@@ -4,7 +4,7 @@ function p = defineParams_within_round(p, iSub)
     % p.DATA_FOLDER = '../../raw_data/';
 
     % Save prev values.
-    SIM_NUM_BLOCKS = p.NUM_BLOCKS;
+    % SIM_NUM_BLOCKS = p.NUM_BLOCKS;
     % SIMULATE = p.SIMULATE;
     NORMALIZE_WITHIN_SUB = p.NORMALIZE_WITHIN_SUB;
     NORM_TRAJ = p.NORM_TRAJ;

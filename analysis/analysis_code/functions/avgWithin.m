@@ -39,7 +39,9 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     offset_col  = ['offset'];
     mad_col     = [strrep(traj_name{1}, '_x',''), '_mad'];
     % URI - adding mad_z
-    mad_z_col     = [strrep(traj_name{1}, '_x',''), '_mad_z'];
+    if(to_normalize)
+        mad_z_col     = [strrep(traj_name{1}, '_x',''), '_mad_z'];
+    end
     mad_p_col   = [strrep(traj_name{1}, '_x',''), '_mad_p'];
     com_col = ['com'];
     tot_dist_col = ['tot_dist'];
@@ -69,7 +71,9 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     trial.mt = sortTrials(reach_data_table.(offset_col) - reach_data_table.(onset_col), sorter, "", "", to_normalize); % Movement time.
     trial.mad = sortTrials(reach_data_table.(mad_col), sorter, "", "", to_normalize); % Maximum absolute deviation.
     % URI - adding mad_z
-    trial.mad_z = sortTrials(reach_data_table.(mad_z_col), sorter, "", "", to_normalize); % Maximum absolute deviation - standardized.
+    if(to_normalize)
+        trial.mad_z = sortTrials(reach_data_table.(mad_z_col), sorter, "", "", to_normalize); % Maximum absolute deviation - standardized.
+    end
     trial.mad_p = sortTrials(reach_data_table.(mad_p_col), sorter, "", "", to_normalize); % Maximally deviating point.
     trial.com = sortTrials(reach_data_table.(com_col), sorter, "", "com", to_normalize); % Number of changes of mind.
     trial.tot_dist = sortTrials(reach_data_table.(tot_dist_col), sorter, "", "", to_normalize); % Total distance traveled.
@@ -91,7 +95,9 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     avg.mt = sortedAvg(trial.mt, '', 0);
     avg.mad = sortedAvg(trial.mad, '', 0);
     % URI - adding mad_z
-    avg.mad_z = sortedAvg(trial.mad_z, '', 0);
+    if(to_normalize)
+        avg.mad_z = sortedAvg(trial.mad_z, '', 0);
+    end
     avg.mad_p = sortedAvg(trial.mad_p, '', 1);
     avg.com = sortedAvg(trial.com, '', 0);
     avg.tot_dist = sortedAvg(trial.tot_dist, '', 0);
