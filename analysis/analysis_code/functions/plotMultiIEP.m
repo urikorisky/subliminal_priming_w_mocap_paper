@@ -2,7 +2,7 @@
 % plot_each_sub - Add another plot with each sub's avg.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [] = plotMultiIEP(traj_names, subplot_p, plot_each_sub, plt_p, p)
+function [outStats] = plotMultiIEP(traj_names, subplot_p, plot_each_sub, plt_p, p)
 
 good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 
@@ -91,6 +91,6 @@ graphs = {'Congruent', 'Incongruent'};
 % legend(h, graphs, 'Location','southeast');
 % legend('boxoff');
 
-% Print stats to terminal.
-printTsStats('---- iEP --------', clusters);
+    % Print stats to terminal.
+    outStats = printTsStats('iEP', clusters);
 end

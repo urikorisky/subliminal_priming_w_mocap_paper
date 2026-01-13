@@ -18,6 +18,9 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
     thresh = tinv(1 - alpha/2, size(data1, 2) - 1);
 
     clusters_dist = [];
+
+    lastStr = '';
+
     for iPerm = 1:n_perm
         % Shuffle conditions.
         rand_sign = repmat((rand(1, size(data1, 2)) < 0.5) * 2 - 1, size(data1, 1), 1);
@@ -31,8 +34,19 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
         [~, idx] = max(abs(rand_clusters));
         max_cluster = rand_clusters(idx);
         clusters_dist = [clusters_dist; max_cluster];
+        
+        pct = floor(100 * iPerm / n_perm);    % integer percent 0..100
+        s = sprintf('%3d%%', pct);           % fixed width '  0%', '100%'
+        if ~strcmp(s, lastStr)
+            if ~isempty(lastStr)
+                fprintf(1, repmat('\b', 1, numel(lastStr))); % erase previous
+            end
+            fprintf(1, '%s', s);            % write new percent (no newline)
+            lastStr = s;
+        end
     end
 
+    fprintf('\n');
     % Transform hist for one sided t-test.
     clusters_dist = abs(clusters_dist);
 

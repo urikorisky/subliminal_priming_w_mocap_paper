@@ -1,8 +1,13 @@
 % Plots the average trajectories (over multiple subs) with a shade of CI around them.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [] = plotMultiAvgTrajWithShade(traj_names, plt_p, p)
-plt_p.errbar_type = 'ci';
+function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
+
+    if(~plotFlag)
+        return;
+    end
+    outStats = [];
+    plt_p.errbar_type = 'ci';
     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
     for iTraj = 1:length(traj_names)
         hold on;
@@ -79,7 +84,7 @@ plt_p.errbar_type = 'ci';
 
         if ~p.NORM_TRAJ
             % Print stats to terminal.
-            printTsStats('----Deviation From center--------', clusters);
+            outStats = printTsStats('Deviation From center', clusters);
         end
     end
 end

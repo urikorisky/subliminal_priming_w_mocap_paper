@@ -3,8 +3,9 @@
 % subplot_p - parameters for 'subplot' command for each of the 2 subplots.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [] = plotMultiXStd_URI(traj_names, plt_p, p)
+function [outStats] = plotMultiXStd_URI(traj_names, plt_p, p)
 
+    outStats = [];
     for iTraj = 1:length(traj_names)
         left_right = ["left", "right"];
         good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
@@ -76,6 +77,8 @@ function [] = plotMultiXStd_URI(traj_names, plt_p, p)
         legend('boxoff');
 
         % Print stats to terminal.
-        printTsStats('----Movement variation--------', clusters);
+        if(~isempty(clusters))
+            outStats = printTsStats('Movement variation', clusters);
+        end
     end
 end

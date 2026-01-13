@@ -1,0 +1,19 @@
+function [] = printAndSave(final_fig_handles,full_stats_tables,analysisParameters)
+%PRINTANDSAVE Summary of this function goes here
+%   Detailed explanation goes here
+
+% Save all figures:
+    for cFig = fields(final_fig_handles)'
+        saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.fig',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
+        saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.png',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
+    end
+
+% Save all the statistics in one MAT file:
+save(sprintf('%s/All_Statistics.mat',analysisParameters.targetStats_allAnalysesCombined),full_stats_tables);
+writetable(full_stats_tables.FDR_corr_analyzed_stats_tables, sprintf('%s/All_Statistics.xlsx', analysisParameters.targetStats_allAnalysesCombined), 'Congruency_Effects_FDR_correcte', 1);
+
+
+% Print all the statistics into one workbook:
+    
+
+end

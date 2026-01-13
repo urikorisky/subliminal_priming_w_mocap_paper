@@ -1,8 +1,8 @@
 % Plots the average heading angle (over subs) at each point along the trajectory.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [] = plotMultiHeadAngle_URI(traj_names, plt_p, p,xAxSource)
-    err_bar_type = 'se'; % SE(standard error) or CI(confidence interval).
+function [outStats] = plotMultiHeadAngle_URI(traj_names, plt_p, p,xAxSource)
+    err_bar_type = 'ci'; % SE(standard error) or CI(confidence interval).
 
     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 
@@ -122,7 +122,7 @@ function [] = plotMultiHeadAngle_URI(traj_names, plt_p, p,xAxSource)
         xlim(x_lim);
         
         % Prints stats to terminal.
-        printTsStats('----Heading angle--------', clusters); % Why t* is NaN???????            
+        outStats = printTsStats('Heading angle', clusters); % Why t* is NaN???????            
 
     end %</switch xAxSource>
 end

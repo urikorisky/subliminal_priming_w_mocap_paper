@@ -1,4 +1,7 @@
-function analysis_pipeline(analysisParameters,roundNum)
+function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roundNum)
+    
+
+
     %% Parameters
     load('../../experiment/RUN_ME/code/p.mat');
     %addpath(genpath('./imported_code'));
@@ -6,6 +9,13 @@ function analysis_pipeline(analysisParameters,roundNum)
 
     %p.PROC_DATA_FOLDER = '../processed_data/';
     p.DATA_FOLDER = analysisParameters.rawDataFolder;
+    if(~isfield(analysisParameters,'statsTables'))
+        statsTables = struct;
+    else
+        statsTables = analysisParameters.statsTables;
+    end
+    
+    currStatsTable = transferStatsToStatsTable();
 
     if(analysisParameters.fromRawData)
         switch(analysisParameters.analysisRounds{roundNum})
@@ -47,15 +57,19 @@ function analysis_pipeline(analysisParameters,roundNum)
                 p.MIN_SAMP_LEN = 0.34; % In sec. Shorter trajs are excluded. (for NORM_TRAJ=0 use 0.34, otherwise 0.1).
                                         % When NORM_TRAJ=0, this is the len all trajs will be trimmed to.
                                         % Used "Movement Time Percentiles" section to determine the desired value.
+                outFigFolder = analysisParameters.targetFigs_noTrajNorm_noStandardization_folder;
                 
             case 'TrajNorm_noStandardization'
                 p.NORMALIZE_WITHIN_SUB = 0;
                 p.NORM_TRAJ = 1; 
                 p.MIN_SAMP_LEN = 0.1;
+                outFigFolder = analysisParameters.targetFigs_TrajNorm_noStandardization_folder;
+
             case 'TrajNorm_Standardization'
                 p.NORMALIZE_WITHIN_SUB = 1;
                 p.NORM_TRAJ = 1; 
                 p.MIN_SAMP_LEN = 0.1;
+                outFigFolder = analysisParameters.targetFigs_TrajNorm_Standardization_folder;
     end
 
     p.MIN_TRIM_FRAMES = p.MIN_SAMP_LEN * p.REF_RATE_HZ; % Minimal length (in samples, also called frames) to trim traj to (instead of normalization).
@@ -288,56 +302,43 @@ function analysis_pipeline(analysisParameters,roundNum)
         timing = num2str(toc);
         disp(['Preprocessing done. ' timing 'Sec']);
 
-        if (strcmp(analysisParameters.analysisRounds{roundNum},'noTrajNorm_noStandardization'))
-            % only do trial and participant screening based on the
-            % non-normalized trajectories.
         %% Trial Screening
-            tic
-            for iTraj = 1:length(traj_names)
-                [reach_bad_trials, reach_n_bad_trials, reach_bad_trials_i] = trialScreen(traj_names{iTraj}, 'reach', p);
-                % % % % Exp 1,2,3 has no keybaord session.
-                % % % if any(p.ORIG_SUBS < 43)
-                % % %     keyboard_n_bad_trials = array2table(zeros(size(reach_n_bad_trials)), 'VariableNames',reach_n_bad_trials.Properties.VariableNames);
-                % % %     keyboard_bad_trials_i = table('size',size(reach_bad_trials_i), 'variableNames',reach_bad_trials_i.Properties.VariableNames, 'VariableTypes',repmat("cell", [1, width(reach_bad_trials_i)]));
-                % % %     keyboard_bad_trials = {};
-                % % %     for iSub = p.SUBS
-                % % %         keyboard_bad_trials{iSub,1} = array2table(zeros(size(reach_bad_trials{iSub})), 'VariableNames',reach_bad_trials{iSub}.Properties.VariableNames);
-                % % %     end
-                % % % else
-                    [keyboard_bad_trials, keyboard_n_bad_trials, keyboard_bad_trials_i] = trialScreen(traj_names{iTraj}, 'keyboard', p);
-                % % % end
-                save([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_bad_trials', 'reach_n_bad_trials', 'reach_bad_trials_i', 'keyboard_bad_trials', 'keyboard_n_bad_trials', 'keyboard_bad_trials_i');
-            end
-            timing = num2str(toc);
-            disp(['Trial screening done. ' timing 'Sec']);
-            %% Subject screening
-            tic
-            for iTraj = 1:length(traj_names')
-                [reach_bad_subs, reach_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'reach', p);
-                [keyboard_bad_subs, keyboard_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'keyboard', p);
-                % Exp 1,2,3 had no keyboard task.
-                if any(p.ORIG_SUBS < 43)
-                    keyboard_bad_subs(:,:) = array2table(zeros(size(keyboard_bad_subs)));
-                end
-                bad_subs = array2table(reach_bad_subs{:,:} | keyboard_bad_subs{:,:}, 'VariableNames',reach_bad_subs.Properties.VariableNames);
-                good_subs = p.SUBS(~ismember(p.SUBS, find(bad_subs.any)));
-                save([p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'bad_subs', 'reach_bad_subs', 'keyboard_bad_subs');
-                save([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
-                save([p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_valid_trials', 'keyboard_valid_trials');
-            end
-            timing = num2str(toc);
-            disp(['Sub screening done. ' timing 'Sec']);
-        else % analysis normalizes trajectory
-            % Copy screening decision from the non-normalized analysis, if
-            % exists:
-            screeningDecisionSrcFldr = analysisParameters.targetPreProcData_noTrajNorm_noStandardization_folder;
-            for iTraj = 1:length(traj_names)
-                copyfile([screeningDecisionSrcFldr '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'])
-                copyfile([screeningDecisionSrcFldr  '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
-                copyfile([screeningDecisionSrcFldr  '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
-                copyfile([screeningDecisionSrcFldr  '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'],[p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);
-            end
+        tic
+        for iTraj = 1:length(traj_names)
+            [reach_bad_trials, reach_n_bad_trials, reach_bad_trials_i] = trialScreen(traj_names{iTraj}, 'reach', p);
+            % % % % Exp 1,2,3 has no keybaord session.
+            % % % if any(p.ORIG_SUBS < 43)
+            % % %     keyboard_n_bad_trials = array2table(zeros(size(reach_n_bad_trials)), 'VariableNames',reach_n_bad_trials.Properties.VariableNames);
+            % % %     keyboard_bad_trials_i = table('size',size(reach_bad_trials_i), 'variableNames',reach_bad_trials_i.Properties.VariableNames, 'VariableTypes',repmat("cell", [1, width(reach_bad_trials_i)]));
+            % % %     keyboard_bad_trials = {};
+            % % %     for iSub = p.SUBS
+            % % %         keyboard_bad_trials{iSub,1} = array2table(zeros(size(reach_bad_trials{iSub})), 'VariableNames',reach_bad_trials{iSub}.Properties.VariableNames);
+            % % %     end
+            % % % else
+                [keyboard_bad_trials, keyboard_n_bad_trials, keyboard_bad_trials_i] = trialScreen(traj_names{iTraj}, 'keyboard', p);
+            % % % end
+            save([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_bad_trials', 'reach_n_bad_trials', 'reach_bad_trials_i', 'keyboard_bad_trials', 'keyboard_n_bad_trials', 'keyboard_bad_trials_i');
         end
+        timing = num2str(toc);
+        disp(['Trial screening done. ' timing 'Sec']);
+        %% Subject screening
+        tic
+        for iTraj = 1:length(traj_names')
+            [reach_bad_subs, reach_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'reach', p);
+            [keyboard_bad_subs, keyboard_valid_trials] = subScreening(traj_names{iTraj}, pas_rate, 'keyboard', p);
+            % Exp 1,2,3 had no keyboard task.
+            if any(p.ORIG_SUBS < 43)
+                keyboard_bad_subs(:,:) = array2table(zeros(size(keyboard_bad_subs)));
+            end
+            bad_subs = array2table(reach_bad_subs{:,:} | keyboard_bad_subs{:,:}, 'VariableNames',reach_bad_subs.Properties.VariableNames);
+            good_subs = p.SUBS(~ismember(p.SUBS, find(bad_subs.any)));
+            save([p.PROC_DATA_FOLDER '/bad_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'bad_subs', 'reach_bad_subs', 'keyboard_bad_subs');
+            save([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
+            save([p.PROC_DATA_FOLDER '/valid_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_valid_trials', 'keyboard_valid_trials');
+        end
+        timing = num2str(toc);
+        disp(['Sub screening done. ' timing 'Sec']);
+        
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %                                                %
@@ -494,6 +495,9 @@ function analysis_pipeline(analysisParameters,roundNum)
             keyboard_bad_trials = bad_trials.keyboard_bad_trials;
             for iSub = p.SUBS
                 disp(iSub);
+                if(iSub==50)
+                    disp('pause');
+                end
                 p = defineParams_within_round(p, iSub);
                 [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_names{iTraj}, reach_bad_trials, keyboard_bad_trials, pas_rate, p.NORMALIZE_WITHIN_SUB, p);
                 save([p.PROC_DATA_FOLDER '/sub' num2str(iSub) p.DAY '_sorted_trials_' traj_names{iTraj}{1} '.mat'], 'r_trial', 'k_trial');
@@ -617,7 +621,7 @@ function analysis_pipeline(analysisParameters,roundNum)
 %
 %
 %
-%
+
     %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %                                                %
     % Gather averages and analyze group-level stats: %
@@ -625,15 +629,45 @@ function analysis_pipeline(analysisParameters,roundNum)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+    %% Gather trial-screening statistics into stats tables:
+    if(~p.NORM_TRAJ)
+        for iTraj = 1:length(traj_names)
+            load([p.PROC_DATA_FOLDER '/bad_trials_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_n_bad_trials','keyboard_n_bad_trials');
+            load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
+            statsTables.trialScreening = struct('Keyboard',keyboard_n_bad_trials(good_subs,:),...
+            'Reaching',reach_n_bad_trials(good_subs,:));
+        end
+    end
+    %% Gather Perceptual Awareness Scores into stats tables:
+    if(~p.NORM_TRAJ)
+        for iTraj = 1:length(traj_names)
+            load([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_avg_each', 'keyboard_avg_each');
+            kb_PAS_dists = [(1:numel(good_subs))',(keyboard_avg_each.pas.con(good_subs,:)+keyboard_avg_each.pas.incon(good_subs,:))/240*100];
+            kb_PAS_Pct_Table = cell2table(num2cell(kb_PAS_dists),...
+                'VariableNames',...
+                {'Participant','PAS_1_Percent','PAS_2_Percent','PAS_3_Percent','PAS_4_Percent'});
+            reach_PAS_dists = [(1:numel(good_subs))',(reach_avg_each.pas.con(good_subs,:)+reach_avg_each.pas.incon(good_subs,:))/240*100];
+            reach_PAS_Pct_Table = cell2table(num2cell(reach_PAS_dists),...
+                'VariableNames',...
+                {'Participant','PAS_1_Percent','PAS_2_Percent','PAS_3_Percent','PAS_4_Percent'});
+            statsTables.primeAwarenessDist = struct('Keyboard',kb_PAS_Pct_Table,...
+            'Reaching',reach_PAS_Pct_Table);
+        end
+    end    
     %% Plotting params
     disp("Started setting plotting params.");
-    close all;
+    %close all;
 
     % Params to be defined by user.
     plt_p.alpha_size = 0.05; % For confidence interval.
     plt_p.n_perm = 10000; % Number of permutations for permutation and clustering procedure.
-    plt_p.x_as_func_of = "time"; % To plot X as a function of "time" or "zaxis".
-    plt_p.errbar_type = 'ci'; % Shade and error bar type: 'se', 'ci'. ci is only relevant when var distributes normally.
+    if (p.NORM_TRAJ)
+        plt_p.x_as_func_of = "zaxis"; % To plot X as a function of "time" or "zaxis".
+    else
+        plt_p.x_as_func_of = "time"; % To plot X as a function of "time" or "zaxis".
+    end
+
+    plt_p.errbar_type = 'se'; % Shade and error bar type: 'se', 'ci'. ci is only relevant when var distributes normally.
     % Statistical params.
     plt_p.n_perm_clust_tests = 1;%input("How many permutation+clustering tests do you have?");
     % Plots appearance.
@@ -645,14 +679,14 @@ function analysis_pipeline(analysisParameters,roundNum)
     plt_p.con_avg_col = 'b';
     plt_p.incon_col = [0.86275 0.19608 0.12549];%[0.6350 0.0780 0.1840 f_f_alpha];
     plt_p.incon_avg_col = 'r';
-    plt_p.reach_color = [225 225 225] / 255; % used when comparing exp 2 and 3.
-    plt_p.keyboard_color = [0 146 146] / 255;
-    plt_p.first_practice_color = [125 255 0] / 255;
-    plt_p.second_practice_color = [0 125 0] / 255;
-    plt_p.green_1 = [0.46667 0.85882 0.40392];
-    plt_p.green_2 = [0.56471 0.6902 0.37255];
-    plt_p.test_color = [240 240 30] / 255;
-    plt_p.axes_line_thickness = 3;
+    % plt_p.reach_color = [225 225 225] / 255; % used when comparing exp 2 and 3.
+    % plt_p.keyboard_color = [0 146 146] / 255;
+    % plt_p.first_practice_color = [125 255 0] / 255;
+    % plt_p.second_practice_color = [0 125 0] / 255;
+    % plt_p.green_1 = [0.46667 0.85882 0.40392];
+    % plt_p.green_2 = [0.56471 0.6902 0.37255];
+    % plt_p.test_color = [240 240 30] / 255;
+    plt_p.axes_line_thickness = 2;
     plt_p.time_ticks = [0.05 : 0.05 : p.MIN_SAMP_LEN] * 1000; % Ticks for the time axis in plots.
     plt_p.percent_path_ticks = 10 : 20 : 100; % Ticks for the %path_traveled axis in plots.
     plt_p.left_right_ticks = -10 : 5 : 10; % Ticks for the left/right axis in plots.
@@ -793,7 +827,7 @@ function analysis_pipeline(analysisParameters,roundNum)
             reach_avg_each.pas(iTraj).incon(iSub,:) = r_avg.pas.incon;
             % URI - check normalization flag, only if off then multiply time 
             % variables by 1000 to get ms:
-            if(p.NORMALIZE_WITHIN_SUB)
+            if(p.NORM_TRAJ)
                 timeMultFactor = 1;
             else
                 timeMultFactor = 1000;
@@ -836,233 +870,157 @@ function analysis_pipeline(analysisParameters,roundNum)
     end
     save([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_avg_each', 'keyboard_avg_each');
     disp("Done setting plotting params.");
-% % % %     %% Single Sub plots.
-% % % %     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-% % % %     subs_to_present = good_subs([5,10]);
-% % % %     % Create figure for each sub.
-% % % %     for iSub = subs_to_present
-% % % %         sub_f(iSub,1) = figure('Name',['Sub ' num2str(iSub)], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     %     sub_f(iSub,2) = figure('Name',['Sub ' num2str(iSub)], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     %     sub_f(iSub,3) = figure('Name',['Sub ' num2str(iSub)], 'WindowState','maximized', 'MenuBar','figure');
-% % % %         % Add title.
-% % % %         figure(sub_f(iSub,1)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String',['Sub ' num2str(iSub)], 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     %     figure(sub_f(iSub,2)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String',['Sub ' num2str(iSub)], 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     %     figure(sub_f(iSub,3)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String',['Sub ' num2str(iSub)], 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     end
-% % % %     % 
-% % % %     % ------- Traj of each trial -------
-% % % %     for iSub = subs_to_present
-% % % %         figure(sub_f(iSub,1));
-% % % %         subplot_p = [2,3,1; 2,3,4];
-% % % %         plotAllTrajs(iSub, traj_names, subplot_p, plt_p, p);
-% % % %     end
-% % % %     % 
-% % % %     % % ------- Heading angle of each trial -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(subs_to_present(1),1));
-% % % %     %     subplot(2,3,4);
-% % % %     %     plotHeadAngles(iSub, traj_names{1}{1}, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- Avg traj with shade -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot(2,3,2);
-% % % %     %     plotAvgTrajWithShade(iSub, traj_names, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- React + Movement + Response Times -------
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot(2,1,2);
-% % % %     %     plotReactMtRt(iSub, traj_names, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- PAS -------
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot(2,6,5);
-% % % %     %     plotPas(iSub, traj_names{1}{1}, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- Prime Forced Choice -------
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot(2,6,6);
-% % % %     %     plotRecognition(iSub, pas_rate, traj_names{1}{1}, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- MAD -------
-% % % %     % % Maximum absolute deviation.
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,2));
-% % % %     %     subplot(1,2,1);
-% % % %     %     plotMad(iSub, traj_names, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- MAD Point -------
-% % % %     % % Maximally absolute deviating point.
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,2));
-% % % %     %     subplot_p = [2,2,2; 2,2,4]; % Params for 1st and 2nd subplots.
-% % % %     %     plotMadPoint(iSub, traj_names, subplot_p, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- X Standard Deviation -------
-% % % %     % for iSub = p.SUBS
-% % % %     %     figure(sub_f(iSub,3));
-% % % %     %     subplot_p = [2,2,1; 2,2,2]; % Params for 1st and 2nd subplots.
-% % % %     %     plotXStd(iSub, traj_names, subplot_p, plt_p, p);
-% % % %     % end
-% % % % 
-% % % %     % ------- X Velocity -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot_p = [2,3,2; 2,3,5]; % Params for 1st and 2nd subplots.
-% % % %     %     plotXVelAcc(iSub, 'vel', traj_names{1}, subplot_p, plt_p, p);
-% % % %     % end
-% % % % 
-% % % %     % ------- X Max Velocity -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot(2,3,3);
-% % % %     %     plotMaxVel(iSub, traj_names{1}, plt_p, p);
-% % % %     % end
-% % % % 
-% % % %     % ------- X Acceleration -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot_p = [2,3,2; 2,3,5]; % Params for 1st and 2nd subplots.
-% % % %     %     plotXVelAcc(iSub, 'acc', traj_names{1}, subplot_p, plt_p, p);
-% % % %     % end
-% % % % 
-% % % %     % % ------- Implied endpoint -------
-% % % %     % for iSub = subs_to_present
-% % % %     %     figure(sub_f(iSub,1));
-% % % %     %     subplot_p = [2,3,3; 2,3,6]; % Params for 1st and 2nd subplots.
-% % % %     %     plotIEP(iSub, traj_names{1}, subplot_p, plt_p, p);
-% % % %     % end
-% % % %     % 
-% % % %     % % ------- Keyboard Response Times -------
-% % % %     % if any(p.ORIG_SUBS >=43) % Only for Exp 4.
-% % % %     %     for iSub = p.SUBS
-% % % %     %         figure(sub_f(iSub,3));
-% % % %     %         subplot(2,1,2);
-% % % %     %         plotKeyboardRt(iSub, traj_names{1}{1}, plt_p, p);
-% % % %     %     end
-% % % %     % end
-% % % %     %% Multiple subs average plots.
-% % % %     % Create figures.
-% % % %     all_sub_f(1) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(2) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(3) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(4) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(5) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(6) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     all_sub_f(7) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     % Add title.
-% % % %     figure(all_sub_f(1)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(2)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(3)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(4)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(5)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(6)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % %     figure(all_sub_f(7)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
-% % % % 
-% % % %     % ------- Avg traj with shade -------
-% % % %     figure(all_sub_f(1));
-% % % %     subplot(2,5,[1 2]);
-% % % %     plotMultiAvgTrajWithShade(traj_names, plt_p, p);
-% % % % 
-% % % %     if ~p.NORM_TRAJ % Vel, acc, angle, iEP are meaningless for normalized traj whose z vals mean nothign in space.
-% % % %         % ------- Implied Endpoint -------
-% % % %         figure(all_sub_f(1));
-% % % %         subplot_p = [2,3,3; 2,3,6];
-% % % %         plotMultiIEP(traj_names, subplot_p, 1, plt_p, p);
-% % % % 
-% % % %         % ------- Heading angle -------
-% % % %         figure(all_sub_f(4));
-% % % %         subplot(2,2,1);
-% % % %         plotMultiHeadAngle(traj_names, plt_p, p);
-% % % %         subplot_p = [2,2,3; 2,2,4];
-% % % %     %     plotMultiHeadAngleHeatmap(traj_names, subplot_p, p);
-% % % % 
-% % % %         % ------- Velocity -------
-% % % %         figure(all_sub_f(2));
-% % % %         subplot_p = [2,3,1; 2,3,4];
-% % % %         plotMultiVelAcc('vel', traj_names{1}, subplot_p, 0, plt_p, p);
-% % % % 
-% % % %         % ------- Max Velocity -------
-% % % %         figure(all_sub_f(1));
-% % % %         subplot(2,3,4);
-% % % %         plotMultiMaxVel(traj_names{1}, plt_p, p);
-% % % % 
-% % % %         % ------- Acceleration -------
-% % % %         figure(all_sub_f(2));
-% % % %         subplot_p = [2,3,2; 2,3,5];
-% % % %         plotMultiVelAcc('acc', traj_names{1}, subplot_p, 0, plt_p, p);
-% % % % 
-% % % %         % ------- Velocity Profile -------
-% % % %         % figure(all_sub_f(1));
-% % % %         % plotMultiVelProf(p);
-% % % %     end
-% % % % 
-% % % %     % ------- React + Movement + Response Times Reaching -------
-% % % %     figure(all_sub_f(1));
-% % % %     subplot_p = [2,5,6; 2,5,7];
-% % % %     react_mt_rt_p_val = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p);
-% % % %     p_val = react_mt_rt_p_val.react;
-% % % %     save([p.PROC_DATA_FOLDER '/react_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % %     p_val = react_mt_rt_p_val.mt;
-% % % %     save([p.PROC_DATA_FOLDER '/mt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %     % % ------- MAD -------
-% % % %     % % Maximum absolute deviation.
-% % % %     figure(all_sub_f(3));
-% % % %     subplot(1,3,1);
-% % % %     p_val = plotMultiMad(traj_names, plt_p, p);
-% % % %     save([p.PROC_DATA_FOLDER '/mad_p_val_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'p_val');
-% % % % 
-% % % %     % ------- Reach Area -------
-% % % %     % Area between avg left traj and avg right traj (in each condition).
-% % % %     figure(all_sub_f(1));
-% % % %     subplot(2,5,8);
-% % % %     p_val = plotMultiReachArea(traj_names, plt_p, p);
-% % % %     save([p.PROC_DATA_FOLDER '/ra_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %     % ------- X STD -------
-% % % %     figure(all_sub_f(3));
-% % % %     subplot_p = [2,3,2; 2,3,3; 2,3,5];
-% % % %     plotMultiXStd(traj_names, subplot_p, plt_p, p);
-% % % % 
-% % % %     % ------- COM -------
-% % % %     % Number of changes of mind.
-% % % %     figure(all_sub_f(3));
-% % % %     subplot(2,3,6);
-% % % %     p_val = plotMultiCom(traj_names, plt_p, p);
-% % % %     save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %     % ------- Total distance traveled -------
-% % % %     % Total distance traveled.
-% % % %     figure(all_sub_f(1));
-% % % %     subplot(2,5,3);
-% % % %     p_val = plotMultiTotDist(traj_names, plt_p, p);
-% % % %     save([p.PROC_DATA_FOLDER '/tot_dist_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %     % ------- AUC -------
-% % % %     % Area under the curve.
-% % % %     figure(all_sub_f(2));
-% % % %     subplot(2,3,3);
-% % % %     p_val = plotMultiAuc(traj_names, plt_p, p);
-% % % %     save([p.PROC_DATA_FOLDER '/auc_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %     % ------- Response Times Keyboard -------
-% % % %     if any(p.ORIG_SUBS >=43) % Only for Exp 4.
-% % % %         figure(all_sub_f(2));
-% % % %         subplot(2,3,6);
-% % % %         p_val = plotMultiKeyboardRt(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % %     end
+
+
+    % Aggregate statistics and figures through analysis types:
+    if(isfield(analysisParameters,'figureHandles'))
+        p.figureHandles = analysisParameters.figureHandles;
+    else
+        p.figureHandles = struct();
+    end
+    %% Single Sub plots.
+    % (Only plotting for the normalized trajectories, as appearing in MS):
+    if(p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
+        good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+        subs_to_present = good_subs([5,10]);
+        subFigsDesignation = {'i,k','j,l'};
+        iDesig = 1;
+        % Create figure for each sub.
+        for iSub = subs_to_present
+            sub_f(iSub,1) = figure('Name',[' Figure 3)' subFigsDesignation{iDesig} '  Sub ' num2str(iSub)], 'Position',[597 84 602 760], 'MenuBar','figure');
+            theme light;
+            iDesig = iDesig + 1;
+        end 
+        % ------- Traj of each trial -------
+        for iSub = subs_to_present
+            figure(sub_f(iSub,1));
+            plotAllTrajs(iSub, traj_names, plt_p, p);
+        end
+        p.figureHandles.fig_3_ik = sub_f(53,1);
+        figure(p.figureHandles.fig_3_ik);
+        title('Figure 3) i,k');
+        p.figureHandles.fig_3_jl = sub_f(59,1);
+        figure(p.figureHandles.fig_3_jl);
+        title('Figure 3) j,l');
+    end
+
+    %% Multiple subs average plots.
+    % (URI: Entire part commented out because next section is supposed to
+    % plot the actual figures used in the paper - but need to keep this in
+    % case some are missing!)
+    % % % % % % % Create figures.
+    % % % % % % s = settings; s.matlab.appearance.figure.GraphicsTheme.TemporaryValue = "light";
+    % % % % % % all_sub_f(1) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(2) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(3) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(4) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(5) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(6) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % all_sub_f(7) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % % % % % % Add title.
+    % % % % % % figure(all_sub_f(1)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(2)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(3)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(4)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(5)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(6)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % figure(all_sub_f(7)); annotation('textbox',[0.45 0.915 0.1 0.1], 'String','All Subs', 'FontSize',30, 'LineStyle','none', 'FitBoxToText','on');
+    % % % % % % 
+    % % % % % % % ------- Avg traj with shade -------
+    % % % % % % 
+    % % % % % % figure(all_sub_f(1));
+    % % % % % % subplot(2,5,[1 2]);
+    % % % % % % plotMultiAvgTrajWithShade(traj_names, plt_p, p);
+    % % % % % % 
+    % % % % % % if ~p.NORM_TRAJ % Vel, acc, angle, iEP are meaningless for normalized traj whose z vals mean nothign in space.
+    % % % % % %     % ------- Implied Endpoint -------
+    % % % % % %     figure(all_sub_f(1));
+    % % % % % %     subplot_p = [2,3,3; 2,3,6];
+    % % % % % %     plotMultiIEP(traj_names, subplot_p, 1, plt_p, p);
+    % % % % % % 
+    % % % % % %     % ------- Heading angle -------
+    % % % % % %     figure(all_sub_f(4));
+    % % % % % %     subplot(2,2,1);
+    % % % % % %     plotMultiHeadAngle(traj_names, plt_p, p);
+    % % % % % %     subplot_p = [2,2,3; 2,2,4];
+    % % % % % % %     plotMultiHeadAngleHeatmap(traj_names, subplot_p, p);
+    % % % % % % 
+    % % % % % %     % ------- Velocity -------
+    % % % % % %     figure(all_sub_f(2));
+    % % % % % %     subplot_p = [2,3,1; 2,3,4];
+    % % % % % %     plotMultiVelAcc('vel', traj_names{1}, subplot_p, 0, plt_p, p);
+    % % % % % % 
+    % % % % % %     % ------- Max Velocity -------
+    % % % % % %     figure(all_sub_f(1));
+    % % % % % %     subplot(2,3,4);
+    % % % % % %     plotMultiMaxVel(traj_names{1}, plt_p, p);
+    % % % % % % 
+    % % % % % %     % ------- Acceleration -------
+    % % % % % %     figure(all_sub_f(2));
+    % % % % % %     subplot_p = [2,3,2; 2,3,5];
+    % % % % % %     plotMultiVelAcc('acc', traj_names{1}, subplot_p, 0, plt_p, p);
+    % % % % % % 
+    % % % % % %     % ------- Velocity Profile -------
+    % % % % % %     % figure(all_sub_f(1));
+    % % % % % %     % plotMultiVelProf(p);
+    % % % % % % end
+    % % % % % % 
+    % % % % % % % ------- React + Movement + Response Times Reaching -------
+    % % % % % % figure(all_sub_f(1));
+    % % % % % % subplot_p = [2,5,6; 2,5,7];
+    % % % % % % react_mt_rt_p_val = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p);
+    % % % % % % p_val = react_mt_rt_p_val.react;
+    % % % % % % save([p.PROC_DATA_FOLDER '/react_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % p_val = react_mt_rt_p_val.mt;
+    % % % % % % save([p.PROC_DATA_FOLDER '/mt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % % ------- MAD -------
+    % % % % % % % % Maximum absolute deviation.
+    % % % % % % figure(all_sub_f(3));
+    % % % % % % subplot(1,3,1);
+    % % % % % % p_val = plotMultiMad(traj_names, plt_p, p);
+    % % % % % % save([p.PROC_DATA_FOLDER '/mad_p_val_' p.DAY '_subs_' p.SUBS_STRING '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % ------- Reach Area -------
+    % % % % % % % Area between avg left traj and avg right traj (in each condition).
+    % % % % % % figure(all_sub_f(1));
+    % % % % % % subplot(2,5,8);
+    % % % % % % p_val = plotMultiReachArea(traj_names, plt_p, p);
+    % % % % % % save([p.PROC_DATA_FOLDER '/ra_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % ------- X STD -------
+    % % % % % % figure(all_sub_f(3));
+    % % % % % % subplot_p = [2,3,2; 2,3,3; 2,3,5];
+    % % % % % % plotMultiXStd(traj_names, subplot_p, plt_p, p);
+    % % % % % % 
+    % % % % % % % ------- COM -------
+    % % % % % % % Number of changes of mind.
+    % % % % % % figure(all_sub_f(3));
+    % % % % % % subplot(2,3,6);
+    % % % % % % p_val = plotMultiCom(traj_names, plt_p, p);
+    % % % % % % save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % ------- Total distance traveled -------
+    % % % % % % % Total distance traveled.
+    % % % % % % figure(all_sub_f(1));
+    % % % % % % subplot(2,5,3);
+    % % % % % % p_val = plotMultiTotDist(traj_names, plt_p, p);
+    % % % % % % save([p.PROC_DATA_FOLDER '/tot_dist_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % ------- AUC -------
+    % % % % % % % Area under the curve.
+    % % % % % % figure(all_sub_f(2));
+    % % % % % % subplot(2,3,3);
+    % % % % % % p_val = plotMultiAuc(traj_names, plt_p, p);
+    % % % % % % save([p.PROC_DATA_FOLDER '/auc_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % 
+    % % % % % % % ------- Response Times Keyboard -------
+    % % % % % % if any(p.ORIG_SUBS >=43) % Only for Exp 4.
+    % % % % % %     figure(all_sub_f(2));
+    % % % % % %     subplot(2,3,6);
+    % % % % % %     p_val = plotMultiKeyboardRt(traj_names, plt_p, p);
+    % % % % % %     save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % % % % % % end
 % % % % 
 % % % %     % % ------- FDA -------
 % % % %     figure(all_sub_f(5));
@@ -1181,143 +1139,206 @@ function analysis_pipeline(analysisParameters,roundNum)
 % % % %         end
 % % % %     end
 % % % % 
-% % % %     %% URI - copied to change figure 3 (all measures)
-% % % %     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-% % % %     % Present single trial data of which subs?
-% % % %     subs_to_present = good_subs([5,10]);
-% % % % 
-% % % % 
-% % % %         paper_f(1) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %         % ------- Avg traj with shade -------
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,10,[2:5]);
-% % % %         plotMultiAvgTrajWithShade(traj_names, plt_p, p);
-% % % % 
-% % % %         % ------- Response Times Keyboard -------
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,5,4);
-% % % %         p_val = plotMultiKeyboardRt(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %         % ------- Reach Area -------
-% % % %         % Area between avg left traj and avg right traj (in each condition).
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,5,5);
-% % % %         p_val = plotMultiReachArea(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/ra_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %         % ------- MAD -------
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,5,6);
-% % % %         p_val = plotMultiMad_CongIncong(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/reach_mad_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % % 
-% % % %         % ------- React + Movement + Response Times Reaching -------
-% % % %         figure(paper_f(1));
-% % % %         subplot_p = [2,5,9; 2,5,7];
-% % % %         react_mt_rt_p_val = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p);
-% % % %         p_val = react_mt_rt_p_val.react;
-% % % %         save([p.PROC_DATA_FOLDER '/react_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % %         p_val = react_mt_rt_p_val.mt;
-% % % %         save([p.PROC_DATA_FOLDER '/mt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %         % ------- Total distance traveled -------
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,5,8);
-% % % %         p_val = plotMultiTotDist(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/tot_dist_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % %         % ------- COM -------
-% % % %         % Number of changes of mind.
-% % % %         figure(paper_f(1));
-% % % %         subplot(2,5,10);
-% % % %         p_val = plotMultiCom(traj_names, plt_p, p);
-% % % %         save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-% % % % 
-% % % % 
-% % % %     %% URI - separated the third plot (figure 2 in the orig MS)
-% % % %     paper_f(3) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-% % % %     % ------- Prime Forced choice -------
-% % % %     figure(paper_f(3));
-% % % %     subplot(2,3,1);
-% % % %     plotMultiRecognition(pas_rate, 'reach', 'good_subs', traj_names{1}{1}, plt_p, p);
-% % % %     subplot(2,3,2);
-% % % %     plotMultiRecognition(pas_rate, 'keyboard', 'good_subs', traj_names{1}{1}, plt_p, p);
-% % % %     %% URI - figure 2 changed to include only incongruent condition
-% % % %     plotMultiRecognition_SepByCong('good_subs', traj_names{1}{1}, plt_p, p);
-% % % %     %% Add labels to subplots.
-% % % %     subplots = [];
-% % % %     % Define order of subplots for each configuration.
-% % % %     if p.NORM_TRAJ
-% % % %         figure(paper_f(1));
-% % % %         all_plots = paper_f(1).Children;
-% % % %         subplots{1} = [all_plots(8); all_plots(6); all_plots(5); all_plots(4); all_plots(3); all_plots(2); all_plots(1)];
-% % % %         figure(paper_f(2));
-% % % %         all_plots = paper_f(2).Children;
-% % % %         subplots{2} = [all_plots(6); all_plots(3)];
-% % % %     else
-% % % %         figure(paper_f(1));
-% % % %         all_plots = paper_f(1).Children;
-% % % %         subplots{1} = [all_plots(3); all_plots(1)];
-% % % %     end
-% % % % 
-% % % %     figure(paper_f(3));
-% % % %     all_plots = paper_f(3).Children;
-% % % %     subplots{end+1} = [all_plots(4); all_plots(2)];
-% % % % 
-% % % %     % Iterate over figures.
-% % % %     for iFigure = 1:length(subplots)
-% % % %         labels = 'a':'z';
-% % % %         % Label each subplot.
-% % % %         for iSubplot = 1:length(subplots{iFigure})
-% % % %             y_lim = subplots{iFigure}(iSubplot).YLim;
-% % % %             x_lim = subplots{iFigure}(iSubplot).XLim;
-% % % %             y_location = y_lim(2) + (y_lim(2) - y_lim(1))*0.075;
-% % % %             x_location = x_lim(1) - (x_lim(2) - x_lim(1))*0.19;
-% % % %             text(subplots{iFigure}(iSubplot), x_location, y_location, ['(', labels(iSubplot), ')'], 'FontSize',plt_p.labels_font_size, 'FontWeight','bold');
-% % % %             pause(0.1);
-% % % %         end
-% % % %     end
-% % % % 
-% % % %     %% URI - Re-Plot Figure 4
-% % % %     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-% % % % 
-% % % %     if p.NORM_TRAJ
-% % % %         disp('!!!DO NOT PRODUCE FIGURE 4 WITH NORMALIZED TRAJECTORIES!!!')
-% % % %     end
-% % % %     paper_f(1) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,1400,450]);
-% % % %     % ------- Avg traj with shade -------
-% % % %     figure(paper_f(1));
-% % % %     subplot(1,3,1);
-% % % %     plotMultiAvgTrajWithShade(traj_names, plt_p, p);
-% % % % 
-% % % %     % ------- Implied Endpoint -------
-% % % %     figure(paper_f(1));
-% % % %     subplot_p = [0,0,0;1,3,2];
-% % % %     plotMultiIEP(traj_names, subplot_p, 0, plt_p, p);
-% % % % 
-% % % %     % ------- Heading angle -------
-% % % %     figure(paper_f(1));
-% % % %     subplot(1,3,3);
-% % % %     % Select either "xtime" or "xangle"
-% % % %     plotMultiHeadAngle_URI(traj_names, plt_p, p,'xangle');
-% % % %     figure(paper_f(1));
-% % % %     tightfig();
-% % % %     %% URI - deviance from center's variability supp figure
-% % % %     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-% % % % 
-% % % %     if p.NORM_TRAJ
-% % % %         disp('!!!DO NOT PRODUCE THIS FIGURE WITH NORMALIZED TRAJECTORIES!!!')
-% % % %     end
-% % % %     paper_f(1) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,500,450]);
-% % % % 
-% % % %     % ------- X STD -------
-% % % %     figure(paper_f(1));
-% % % %     plotMultiXStd_URI(traj_names, plt_p, p);
-% % % % 
-% % % %     figure(paper_f(1));
-% % % %     tightfig();
+    %% URI - copied to change figure 3 (all measures)
+    good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+
+    fig3_ah_exists = false;
+    if(isfield(p,'figureHandles'))
+        if (isfield(p.figureHandles,'fig_3_ah'))
+            fig3_ah_exists = true;
+        end
+    end
+    if(~fig3_ah_exists)
+        fig_3_ah_handle = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+        p.figureHandles.fig_3_ah = fig_3_ah_handle;
+    else
+        fig_3_ah_handle = p.figureHandles.fig_3_ah;
+    end
+
+    plotNormTrajNonSTD_flag = false;
+    if(p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
+        plotNormTrajNonSTD_flag = true;
+    end
+
+
+    % ------- Avg traj with shade -------
+    figure(fig_3_ah_handle);
+    subplot(2,10,[2:5]);
+    plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    
+
+    % ------- Response Times Keyboard -------
+        figure(fig_3_ah_handle);
+        subplot(2,5,4);
+        KB_RT_stats = plotMultiKeyboardRt(traj_names, plt_p, p);
+        currStatsTable = transferStatsToStatsTable(KB_RT_stats,currStatsTable);
+        % save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+
+    % ------- Reach Area -------
+    % Area between avg left traj and avg right traj (in each condition).
+    figure(fig_3_ah_handle);
+    subplot(2,5,5);
+    ReachArea_Stats = plotMultiReachArea(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    currStatsTable = transferStatsToStatsTable(ReachArea_Stats,currStatsTable);
+    % save([p.PROC_DATA_FOLDER '/ra_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+
+    % ------- MAD -------
+    figure(fig_3_ah_handle);
+    subplot(2,5,6);
+    MAD_Stats = plotMultiMad_CongIncong(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    currStatsTable = transferStatsToStatsTable(MAD_Stats,currStatsTable);
+    % save([p.PROC_DATA_FOLDER '/reach_mad_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+
+
+    % ------- React + Movement + Response Times Reaching -------
+    figure(fig_3_ah_handle);
+    subplot_p = [2,5,9; 2,5,7];
+    [Reach_RT_Stats,Reach_MT_Stats] = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p,plotNormTrajNonSTD_flag);
+    currStatsTable = transferStatsToStatsTable(Reach_RT_Stats,currStatsTable);
+    currStatsTable = transferStatsToStatsTable(Reach_MT_Stats,currStatsTable);
+    % p_val = react_mt_rt_p_val.react;
+    % save([p.PROC_DATA_FOLDER '/react_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    % p_val = react_mt_rt_p_val.mt;
+    % save([p.PROC_DATA_FOLDER '/mt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+
+    % ------- Total distance traveled -------
+    figure(fig_3_ah_handle);
+    subplot(2,5,8);
+    Total_Distance_Stats = plotMultiTotDist(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    % save([p.PROC_DATA_FOLDER '/tot_dist_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    currStatsTable = transferStatsToStatsTable(Total_Distance_Stats,currStatsTable);
+
+    % ------- COM -------
+    % Number of changes of mind.
+    figure(fig_3_ah_handle);
+    subplot(2,5,10);
+    COM_Stats = plotMultiCom(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    % save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    currStatsTable = transferStatsToStatsTable(COM_Stats,currStatsTable);
+
+
+    %% URI - separated the third plot (figure 2 in the orig MS)
+    % paper_f(3) = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
+    % % ------- Prime Forced choice -------
+    % figure(paper_f(3));
+    % subplot(2,3,1);
+    % plotMultiRecognition(pas_rate, 'reach', 'good_subs', traj_names{1}{1}, plt_p, p);
+    % subplot(2,3,2);
+    % plotMultiRecognition(pas_rate, 'keyboard', 'good_subs', traj_names{1}{1}, plt_p, p);
+    %% URI - figure 2 changed to include only incongruent condition
+    if(~p.NORM_TRAJ)
+        [RecogFigHandles,Recog_Stats] = plotMultiRecognition_SepByCong('good_subs', traj_names{1}{1}, plt_p, p);
+        p.figureHandles.fig2 = RecogFigHandles.incon;
+        p.figureHandles.suppFig3 = RecogFigHandles.con;
+
+        statsTables.Prime_Performance_Stats = Recog_Stats;
+    end
+    %% Add labels to subplots.
+    % subplots = [];
+    % % Define order of subplots for each configuration.
+    % if p.NORM_TRAJ
+    %     figure(fig_3_ah_handle);
+    %     all_plots = fig_3_ah_handle.Children;
+    %     subplots{1} = [all_plots(8); all_plots(6); all_plots(5); all_plots(4); all_plots(3); all_plots(2); all_plots(1)];
+    %     % figure(paper_f(2));
+    %     % all_plots = paper_f(2).Children;
+    %     % subplots{2} = [all_plots(6); all_plots(3)];
+    % else
+    %     figure(fig_3_ah_handle);
+    %     all_plots = fig_3_ah_handle.Children;
+    %     subplots{1} = [all_plots(3); all_plots(1)];
+    % end
+    % 
+    % figure(fig_3_ah_handle);
+    % all_plots = fig_3_ah_handle.Children;
+    % subplots{end+1} = [all_plots(4); all_plots(2)];
+
+    subplots = fig_3_ah_handle.Children;
+    % Iterate over figures.
+    for iFigure = 1:length(subplots)
+        labels = 'a':'z';
+        % Label each subplot.
+        try
+            for iSubplot = 1:length(subplots{iFigure})
+                y_lim = subplots{iFigure}(iSubplot).YLim;
+                x_lim = subplots{iFigure}(iSubplot).XLim;
+                y_location = y_lim(2) + (y_lim(2) - y_lim(1))*0.075;
+                x_location = x_lim(1) - (x_lim(2) - x_lim(1))*0.19;
+                text(subplots{iFigure}(iSubplot), x_location, y_location, ['(', labels(iSubplot), ')'], 'FontSize',plt_p.labels_font_size, 'FontWeight','bold');
+                pause(0.1);
+            end
+        catch e
+            
+        end
+    end
+
+    
+    % mkdir(outFigFolder);
+    % saveas(paper_f(1),sprintf('%s/Figure1.fig',outFigFolder));
+    % saveas(paper_f(3),sprintf('%s/Figure3.fig',outFigFolder));
+
+    %% URI - Re-Plot Figure 4
+    good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+
+    if ~p.NORM_TRAJ
+        
+        plt_p.errbar_type = 'ci';
+
+        fig4Handle = figure('Name','Figure 4', 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,1400,450]);
+
+        fullTraj_Stats = struct('name',[],...
+            'cluster',[],...
+            'start_time',[],...
+            'end_time',[],...
+            'cluster_size',[],...
+            'p_val',[],...
+            'cohens_dz',[],...
+            'tStar',[]);
+        fullTraj_Stats_Table = struct2table(fullTraj_Stats);
+        fullTraj_Stats_Table.Properties.VariableNames{end} = 't*';
+
+        % ------- Avg traj with shade -------
+        figure(fig4Handle);
+        subplot(1,3,1);
+        disp('Average trajectory permutation:');
+        AVG_Trajectory_Clusters_Stats = plotMultiAvgTrajWithShade(traj_names, plt_p, p,true);
+        fullTraj_Stats_Table = transferStatsToStatsTable(AVG_Trajectory_Clusters_Stats,fullTraj_Stats_Table);
+    
+        % ------- Implied Endpoint -------
+        figure(fig4Handle);
+        subplot_p = [0,0,0;1,3,2];
+        disp('Implied endpoint permutation:');
+        IEP_Clusters_Stats = plotMultiIEP(traj_names, subplot_p, 0, plt_p, p);
+        fullTraj_Stats_Table = transferStatsToStatsTable(IEP_Clusters_Stats,fullTraj_Stats_Table);
+    
+        % ------- Heading angle -------
+        figure(fig4Handle);
+        subplot(1,3,3);
+        % Select either "xtime" or "xangle"
+        disp('Heading angle permutation:');
+        HeadingAngle_Clusters_Stats = plotMultiHeadAngle_URI(traj_names, plt_p, p,'xangle');
+        fullTraj_Stats_Table = transferStatsToStatsTable(HeadingAngle_Clusters_Stats,fullTraj_Stats_Table);
+        figure(fig4Handle);
+        tightfig();
+        p.figureHandles.fig4 = fig4Handle;
+        %% URI - deviance from center's variability supp figure
+        good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+    
+        suppFig4Handle = figure('Name','Supplementary Figure 4', 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,500,450]);
+    
+        % ------- X STD -------
+        figure(suppFig4Handle);
+        disp('Movement variance along X-axis permutation:');
+        Xaxis_STD_Clusters_Stats = plotMultiXStd_URI(traj_names, plt_p, p);
+        fullTraj_Stats_Table = transferStatsToStatsTable(Xaxis_STD_Clusters_Stats,fullTraj_Stats_Table);
+    
+        figure(suppFig4Handle);
+        tightfig();
+        p.figureHandles.suppfig4 = suppFig4Handle;
+
+        statsTables.fullTrajAnalysis = fullTraj_Stats_Table;
+    end
+
 % % % %     %% Number of bad trials, Exp 2 vs 3
 % % % %     % To run this section you must first run the analysis on the subs of exp 2 and 3 (seperatly).
 % % % %     num_bad_trials_comp_f = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
@@ -1563,4 +1584,7 @@ function analysis_pipeline(analysisParameters,roundNum)
 % % % %     plotTreeBH_hardCodedValues_URI(plt_p, p);
 % % % % 
 % % % % end
+
+    figureHandles = p.figureHandles;
+    statsTables.(analysisParameters.analysisRounds{roundNum}) = currStatsTable;
 end
