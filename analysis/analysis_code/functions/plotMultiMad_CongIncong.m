@@ -1,6 +1,5 @@
 % Plots the average MAD of each subject, dividing only by congruency (and
-% not side). URI's edit, actually a copy of "plotMultiReachArea.m" which I
-% edited.
+% not side). 
 % plt_p - struct of plotting params.
 % p - struct of exp params.
 % p_val_ra - p-value of the statistical test.

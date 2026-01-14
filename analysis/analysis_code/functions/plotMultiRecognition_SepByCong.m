@@ -1,7 +1,7 @@
 % Plots the average (over good subs) recognition performance.
-% URI function - plots both measures (kb, reach) together in the same plot,
-% separate plots for congruent and incongruent trials. The congruent one
-% might be added to the SI.
+% Plots both measures (kb, reach) together in the same plot,
+% separate plots for congruent and incongruent trials.
+
 % group - which participants to analyze: 'all_subs', 'good_subs'.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
@@ -50,24 +50,14 @@ function [figHandles,outStats] = plotMultiRecognition_SepByCong(group, traj_name
         printBeeswarm(beesdata, YLabel, XTickLabel, colors, plt_p.space, title_char, plt_p.errbar_type, plt_p.alpha_size);
         % Plot chance level.
         plot([-20 20], [50 50], '--', 'color',[0.3 0.3 0.3 plt_p.f_alpha], 'linewidth',2);
-        % ylim([0 100]);
-    
-        % set(gca, 'TickDir','out');
-        % xticks([]);
-        % yticks(plt_p.percent_path_ticks);
+
         set(gca, 'FontSize',plt_p.font_size);
         set(gca, 'FontName',plt_p.font_name);
         set(gca, 'linewidth',plt_p.axes_line_thickness);
-        % Legend.
-        % h = [];
-        % h(1) = plot(nan,nan,'Color',plt_p.con_col, 'linewidth',plt_p.linewidth);
-        % h(2) = plot(nan,nan,'Color',plt_p.incon_col, 'linewidth',plt_p.linewidth);
-        % graphs = {'Congruent', 'Incongruent'};
-        % legend(h, graphs, 'Location','southeast');
-        % legend('boxoff');
+
     
         % T-test on plot.
-        kb_data = avg_each.(measures{1}).fc_prime.(conT)(subs);
+        kb_data = avg_each.(measures{2}).fc_prime.(conT)(subs);
         reach_data = avg_each.(measures{1}).fc_prime.(conT)(subs);
         [~, fc_p_val_reach , fc_ci_reach, fc_stats_reach] = ttest(reach_data, 50);
         [~, fc_p_val_kb , fc_ci_kb, fc_stats_kb] = ttest(kb_data, 50);
@@ -91,16 +81,5 @@ function [figHandles,outStats] = plotMultiRecognition_SepByCong(group, traj_name
         );
         outStats = transferStatsToStatsTable(struct2table(cStats),outStats);
 
-        % [~, fc_p_val_incon , fc_ci_incon, fc_stats_incon] = ttest(avg_each.fc_prime.incon(subs), 50);
-        % fc_p_val = round(fc_p_val, 3);
-    %     text(get(gca, 'xTick'),[10 10], {['p = ' num2str(fc_p_val(1))], ['p = ' num2str(fc_p_val(2))]}, 'FontSize',14, 'HorizontalAlignment','center');
-    
-        % % Print stats to terminal.
-        % outStats = printStats(['Prime Forced Choice, ' group ', ' cMeas], avg_each.fc_prime.con(subs), ...
-        %     avg_each.fc_prime.incon(subs), ["Con","Incon"], fc_p_val(2), fc_ci, fc_stats);
-
-    
-    % 
-    % outStatsTable = struct2table(outStats);
     end
 end

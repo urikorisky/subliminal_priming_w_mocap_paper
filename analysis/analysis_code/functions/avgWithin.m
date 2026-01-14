@@ -38,7 +38,6 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     onset_col   = ['onset'];
     offset_col  = ['offset'];
     mad_col     = [strrep(traj_name{1}, '_x',''), '_mad'];
-    % URI - adding mad_z
     if(to_normalize)
         mad_z_col     = [strrep(traj_name{1}, '_x',''), '_mad_z'];
     end
@@ -70,7 +69,6 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     trial.react = sortTrials(reach_data_table.(onset_col), sorter, "", "", to_normalize); % Reaction time.
     trial.mt = sortTrials(reach_data_table.(offset_col) - reach_data_table.(onset_col), sorter, "", "", to_normalize); % Movement time.
     trial.mad = sortTrials(reach_data_table.(mad_col), sorter, "", "", to_normalize); % Maximum absolute deviation.
-    % URI - adding mad_z
     if(to_normalize)
         trial.mad_z = sortTrials(reach_data_table.(mad_z_col), sorter, "", "", to_normalize); % Maximum absolute deviation - standardized.
     end
@@ -94,7 +92,6 @@ function [r_avg, r_trial, k_avg, k_trial] = avgWithin(iSub, traj_name, reach_bad
     avg.react = sortedAvg(trial.react, '', 0);
     avg.mt = sortedAvg(trial.mt, '', 0);
     avg.mad = sortedAvg(trial.mad, '', 0);
-    % URI - adding mad_z
     if(to_normalize)
         avg.mad_z = sortedAvg(trial.mad_z, '', 0);
     end

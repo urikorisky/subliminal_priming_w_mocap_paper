@@ -61,8 +61,8 @@ full_stats_tables = analysisPrms.statsTables;
 full_stats_tables.analyzed_stats_tables = extract_relevant_statistics(full_stats_tables,'statistics_print_config.csv');
 %% Tree-BH FDR correction:
 
-[FDR_corr_stats_tables,final_fig_handles.TreeBH] = Calc_and_plot_TreeBH(full_stats_tables);
-full_stats_tables.FDR_corr_analyzed_stats_tables = FDR_corr_analyzed_stats_tables;
+[FDR_corr_analyzed_stats_tables,final_fig_handles.TreeBH] = Calc_and_plot_TreeBH(full_stats_tables);
+% full_stats_tables.FDR_corr_analyzed_stats_tables = FDR_corr_analyzed_stats_tables;
 %% Save all outcomes:
 
-printAndSave(final_fig_handles,FDR_corr_stats_tables,analysisPrms)
+printAndSave(final_fig_handles,FDR_corr_analyzed_stats_tables,analysisPrms)

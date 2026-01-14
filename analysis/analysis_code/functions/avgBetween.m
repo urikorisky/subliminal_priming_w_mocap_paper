@@ -14,7 +14,6 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
     r_subs_avg.react     = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     r_subs_avg.mt        = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     r_subs_avg.mad       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
-    % URI - Adding the mad_z calculation:
     if(p.NORMALIZE_WITHIN_SUB)
         r_subs_avg.mad_z       = struct('con_left',0, 'con_right',0, 'incon_left',0, 'incon_right',0);
     end
@@ -52,7 +51,6 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
         r_subs_avg.react     = sortedSum(r_subs_avg.react, r_avg.react);
         r_subs_avg.mt        = sortedSum(r_subs_avg.mt, r_avg.mt);
         r_subs_avg.mad       = sortedSum(r_subs_avg.mad, r_avg.mad);
-        % URI - Adding the mad_z calculation:
         if(p.NORMALIZE_WITHIN_SUB)
             r_subs_avg.mad_z = sortedSum(r_subs_avg.mad_z, r_avg.mad_z);
         end
@@ -84,7 +82,6 @@ function [r_subs_avg, k_subs_avg] = avgBetween(traj_name, p)
     r_subs_avg.react     = divideByNumOfSubs(r_subs_avg.react, n_good_subs);
     r_subs_avg.mt        = divideByNumOfSubs(r_subs_avg.mt, n_good_subs);
     r_subs_avg.mad       = divideByNumOfSubs(r_subs_avg.mad, n_good_subs);
-    % URI - Adding the mad_z calculation:
     if(p.NORMALIZE_WITHIN_SUB)
         r_subs_avg.mad       = divideByNumOfSubs(r_subs_avg.mad_z, n_good_subs);
     end

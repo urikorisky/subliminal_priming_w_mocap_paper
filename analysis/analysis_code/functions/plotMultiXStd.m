@@ -3,8 +3,9 @@
 % subplot_p - parameters for 'subplot' command for each of the 2 subplots.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [] = plotMultiXStd(traj_names, subplot_p, plt_p, p)
+function [outStats] = plotMultiXStd(traj_names, plt_p, p)
 
+    outStats = [];
     for iTraj = 1:length(traj_names)
         left_right = ["left", "right"];
         good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
@@ -19,7 +20,7 @@ function [] = plotMultiXStd(traj_names, subplot_p, plt_p, p)
             % Array with timing of each sample.
             time_series = (1 : size(subs_avg.traj.con_left,1)) * p.SAMPLE_RATE_SEC;
             x_axis = time_series;
-            x_label = 'time';
+            x_label = 'Time (ms)';
             xlimit = [0 p.MIN_SAMP_LEN]; % For plot.
         else
             x_axis = subs_avg.traj.con_left(:,3)*100;
@@ -31,33 +32,14 @@ function [] = plotMultiXStd(traj_names, subplot_p, plt_p, p)
         % Unite sides to single var.
         x_std_con = {subs_avg.x_std.con_left, subs_avg.x_std.con_right};
         x_std_incon = {subs_avg.x_std.incon_left, subs_avg.x_std.incon_right};
-        % 2 plots: left, right.
-        for side = 1:2
-            subplot(subplot_p(side, 1), subplot_p(side, 2), subplot_p(side, 3));
-            hold on;
-            plot(x_axis, x_std_con{side}, 'color',plt_p.con_col);
-            plot(x_axis, x_std_incon{side}, 'color',plt_p.incon_col);
-
-            ylabel('X STD');
-            xlabel(x_label);
-            xlim(xlimit);
-            set(gca,'FontSize',14);
-            title(['STD in X Axis' left_right(side)]);
-            % Legend.
-            h = [];
-            h(1) = bar(NaN,NaN,'FaceColor',plt_p.con_col);
-            h(2) = bar(NaN,NaN,'FaceColor',plt_p.incon_col);
-            legend(h,'Con','Incon', 'Location','northwest');
-        end
         
-        % Combined (left and right).
-        subplot(subplot_p(3, 1), subplot_p(3, 2), subplot_p(3, 3));
+        
         hold on;
         % Plot.
         stdshade(avg_each.x_std.con(:,good_subs)', plt_p.f_alpha, plt_p.con_col, x_axis, 0, 1, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
         stdshade(avg_each.x_std.incon(:,good_subs)', plt_p.f_alpha, plt_p.incon_col, x_axis, 0, 1, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
 
-        plot(xlimit, [0 0], '--', 'linewidth',3, 'color',[0.15 0.15 0.15 plt_p.f_alpha]); % Zero line.
+        % plot(xlimit, [0 0], '--', 'linewidth',3, 'color',[0.15 0.15 0.15 plt_p.f_alpha]); % Zero line.
 
         % Permutation testing.
         clusters = permCluster(avg_each.x_std.con(:,good_subs), avg_each.x_std.incon(:,good_subs), plt_p.n_perm, plt_p.n_perm_clust_tests);
@@ -71,17 +53,32 @@ function [] = plotMultiXStd(traj_names, subplot_p, plt_p, p)
 
         set(gca, 'TickDir','out');
         xlabel(x_label);
-        ylabel('X SD');
-        title('Trajectory SD');
-        set(gca,'FontSize',14);
+
+        labels_s=xticklabels();
+        labels_ms = cellfun(@(x) num2str(round(str2double(x)*1000)),labels_s,'UniformOutput',false);
+        xticklabels(labels_ms);
+
+
+        ylabel('X-axis S.D.');
+        title('Trajectory X-axis Standard Deviation');
+        set(gca, 'FontSize',plt_p.font_size);
+        set(gca, 'FontName',plt_p.font_name);
+        set(gca,'linewidth',plt_p.axes_line_thickness);
         % Legend.
-%         h = [];
-%         h(1) = bar(NaN,NaN,'FaceColor',plt_p.con_col);
-%         h(2) = bar(NaN,NaN,'FaceColor',plt_p.incon_col);
-%         h(3) = bar(NaN,NaN,'FaceColor',[0.15 0.15 0.15]);
-%         legend(h, 'con','incon',err_bar_type, 'Location','northwest');
+        h = [];
+        h(1) = plot(nan,nan,'Color',plt_p.con_col, 'linewidth',plt_p.linewidth);
+        h(2) = plot(nan,nan,'Color',plt_p.incon_col, 'linewidth',plt_p.linewidth);
+        graphs = {'Congruent', 'Incongruent'};
+%         if ~isempty(clusters)
+%             h(3) = plot(nan,nan,'Color',[1, 1, 1, plt_p.f_alpha/2], 'linewidth',plt_p.linewidth);
+%             graphs{3} = 'Significant';
+%         end
+        legend(h, graphs, 'Location','northwest');
+        legend('boxoff');
 
         % Print stats to terminal.
-        printTsStats('----Movement variation--------', clusters);
+        if(~isempty(clusters))
+            outStats = printTsStats('Movement variation', clusters);
+        end
     end
 end
