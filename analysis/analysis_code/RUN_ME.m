@@ -4,9 +4,10 @@
 % manuscript.
 %
 % To analyze the data starting from the raw data files, download them from:
-% https://osf.io/8dsvp
-% copy the files to a designated folder, and put its path below in the
-% "Parameters" section, for analysisPrms.rawDataFolder
+% https://osf.io/ujcep/files/osfstorage
+% Under "Data", find the folder "Raw_Data" and download it.
+% Put the path to this folder below in the "Parameters" section, as the  
+% value of analysisPrms.rawDataFolder
 %
 % By default, the output figures and statistics will be saved into
 % analysis/figures and analysis/statistics, respectively.
