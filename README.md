@@ -27,10 +27,7 @@ You can reproduce the analysis in two ways: using the **pre-processed data** inc
 
 This method uses the intermediate files located in `precomputed_processed_data` to generate figures and stats immediately.
 
-1.  Clone this repository to your local machine:
-    ```bash
-    git clone [https://github.com/your-username/your-repo-name.git](https://github.com/urikorisky/subliminal_priming_w_mocap_paper)
-    ```
+1.  Download this repository to your local machine.
 2.  Open MATLAB and navigate to the `analysis/analysis_code` folder.
 3.  Open and run the master script:
     ```matlab
@@ -41,9 +38,11 @@ This method uses the intermediate files located in `precomputed_processed_data` 
 
 To process the data from the source files, you must first download the raw dataset.
 
-1.  **Download Data**: Download the raw data files from the project's OSF repository: [https://osf.io/8dsvp](https://osf.io/8dsvp).
-2.  **Clone Repository**: If you haven't already, clone this repository.
-3.  **Configure Script**:
+1.  **Download Data**: Download the raw data files from the project's OSF repository: [https://osf.io/ujcep/files/osfstorage](https://osf.io/ujcep/files/osfstorage)
+   a. Under the "Data" Folder, locate the "Raw_Data" folder.
+   b. Download the "Raw_Data" folder to your computer.
+3.  **Download Repository**: If you haven't already, download (or clone) this repository.
+4.  **Configure Script**:
     * Open `analysis/analysis_code/RUN_ME.m` in MATLAB.
     * Locate the **Parameters** section at the top of the script.
     * Modify the following variables to point to your local raw data folder:
@@ -53,7 +52,7 @@ To process the data from the source files, you must first download the raw datas
     analysisPrms.fromRawData = true;
     analysisPrms.rawDataFolder = 'C:\Path\To\Your\Downloaded\RawData';
     ```
-4.  **Run**: Execute the `RUN_ME.m` script.
+5.  **Run**: Execute the `RUN_ME.m` script.
 
 ## 📄 Citation
 
