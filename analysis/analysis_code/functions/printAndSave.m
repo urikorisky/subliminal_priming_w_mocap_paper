@@ -3,11 +3,11 @@ function [] = printAndSave(final_fig_handles,full_stats_tables,analysisParameter
 %   Detailed explanation goes here
 
     % Save all figures:
-    % mkdir(analysisParameters.targetFigs_allAnalysesCombined);
-    % for cFig = fields(final_fig_handles)'
-    %     saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.fig',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
-    %     saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.png',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
-    % end
+    mkdir(analysisParameters.targetFigs_allAnalysesCombined);
+    for cFig = fields(final_fig_handles)'
+        saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.fig',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
+        saveas(final_fig_handles.(cFig{1}),sprintf('%s/%s.png',analysisParameters.targetFigs_allAnalysesCombined,cFig{1}))
+    end
 
     % Save all the statistics in one MAT file:
     statsFldr = analysisParameters.targetStats_allAnalysesCombined;

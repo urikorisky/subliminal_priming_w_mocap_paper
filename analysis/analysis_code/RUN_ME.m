@@ -16,9 +16,19 @@
 % file with a different sheet for each analysis that appears in the
 % manuscript
 %
-% Technical Requirements:
-% - Matlab's bioinformatics toolbox (for the mafdr() function used in the
-% FDR correction)
+% Note about p-values:
+% Due to the use of permutation analyses to identify clusters of
+% significance in the full trajectories, slight differences may exist
+% between the p-values reported in the manuscript for these findings
+% (appearing in Figure 4)
+%
+% Dependencies:
+% - Bioinformatics Toolbox
+% - Curve Fitting Toolbox
+% - Image Processing Toolbox
+% - Mapping Toolbox
+% - Signal Processing Toolbox
+% - Statistics and Machine Learning Toolbox
 
 
 clear;

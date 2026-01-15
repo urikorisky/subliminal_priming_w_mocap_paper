@@ -11,8 +11,6 @@ function p = defineParams_within_round(p, iSub)
     PROC_DATA_FOLDER = p.PROC_DATA_FOLDER;
     DATA_FOLDER = p.DATA_FOLDER;
 
-    p = load([p.DATA_FOLDER '/sub' num2str(iSub) DAY '_' 'p.mat']); p = p.p;
-    % p.SIMULATE = SIMULATE;
     p.NORMALIZE_WITHIN_SUB = NORMALIZE_WITHIN_SUB;
     p.NORM_TRAJ = NORM_TRAJ;
     p.MIN_SAMP_LEN = MIN_SAMP_LEN;
