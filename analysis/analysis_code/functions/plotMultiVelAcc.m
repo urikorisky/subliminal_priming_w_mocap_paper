@@ -1,11 +1,11 @@
 % Plots velocity or avg acceleration of all subs.
 % plot_each_sub - Add another plot with each sub's avg.
 % target - 'vel'/'acc'.
-function [] = plotMultiVelAcc(target, traj_names, subplot_p, plot_each_sub, plt_p, p)
-good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
+function [outStats] = plotMultiVelAcc(target, traj_names, subplot_p, plot_each_sub, plt_p, p)
+good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 
 % Load data.
-avg_each = load([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{1} '_subs_' p.SUBS_STRING '.mat']);  avg_each = avg_each.reach_avg_each;
+avg_each = load([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  avg_each = avg_each.reach_avg_each;
 con = avg_each.(target).con(:, good_subs);
 incon = avg_each.(target).incon(:, good_subs);
 values = [con, incon];
@@ -84,5 +84,5 @@ graphs = {'Congruent', 'Incongruent'};
 % legend('boxoff');
 
 % Print stats to terminal.
-printTsStats(['---- ' target ' --------'], clusters);
+    outStats = printTsStats(['---- ' target ' --------'], clusters);
 end

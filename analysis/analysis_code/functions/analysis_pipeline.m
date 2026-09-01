@@ -97,6 +97,9 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
     traj_types = replace(traj_types, '_x', '');
     disp("Done setting params.");
 
+    % Initializing
+    figureHandles = [];
+
     %% Preprocessing Raw Data
     if(analysisParameters.fromRawData)
         %% Create processed data files
@@ -522,6 +525,8 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         end
     end  
 
+    load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat'], 'good_subs');
+
     %% Plotting
 
     %% - Plotting params
@@ -723,7 +728,41 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
     save([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat'], 'reach_avg_each', 'keyboard_avg_each');
     disp("Done setting plotting params.");
 
+%% Calculate effect sizes CIs for the relevant effects, as well as the
+    % CIs for each pairwise comparison of them, via bootstrapping:
 
+    % Defining all the single-value metrics to analyze:
+    fields_to_analyze = {'rt', 'react', 'mt', 'mad', 'com', 'tot_dist', 'auc', 'max_vel', 'ra', 'kb_rt'};
+
+    % Generate all possible pairwise comparisons:
+    pair_indices = nchoosek(1:length(fields_to_analyze), 2);
+    pairs_to_compare = cell(1, size(pair_indices, 1));
+    for i = 1:size(pair_indices, 1)
+        pairs_to_compare{i} = {fields_to_analyze{pair_indices(i,1)}, fields_to_analyze{pair_indices(i,2)}};
+    end
+
+    % Number of bootstraps:
+    n_bootstraps = 10000;
+
+    [effects_table, comparisons_table] = compareEffectSizes(...
+        reach_avg_each, keyboard_avg_each, ...
+        fields_to_analyze, 'con', 'incon', ...
+        pairs_to_compare, n_bootstraps, good_subs);
+
+% % %     % Save the results to Excel:
+% % %     writetable(effects_table, [analysisParameters.targetStats_allAnalysesCombined '/Effect_Sizes.xlsx'],'Sheet',analysisParameters.analysisRounds{roundNum});
+% % %     writetable(comparisons_table, [analysisParameters.targetStats_allAnalysesCombined '/Effect_Comparisons.xlsx'],'Sheet',analysisParameters.analysisRounds{roundNum});
+% % % 
+    % 
+
+% Export the raw data into the persistent statsTables struct
+roundName = matlab.lang.makeValidName(analysisParameters.analysisRounds{roundNum});
+statsTables.rawAggData.(roundName).reach = reach_avg_each;
+statsTables.rawAggData.(roundName).keyboard = keyboard_avg_each;
+statsTables.good_subs = good_subs;
+
+
+%%
     % Aggregate statistics and figures through analysis types:
     if(isfield(analysisParameters,'figureHandles'))
         p.figureHandles = analysisParameters.figureHandles;
@@ -920,6 +959,11 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         figure(suppFig4Handle);
         tightfig();
         p.figureHandles.suppfig4 = suppFig4Handle;
+
+        % --------- Velocity Profile ---------
+        figure(); % Temporary separate figure
+        VelAcc_Clusters_Stats = plotMultiVelAcc('vel', traj_names, subplot_p, 0, plt_p, p);
+        fullTraj_Stats_Table = transferStatsToStatsTable(VelAcc_Clusters_Stats,fullTraj_Stats_Table);
 
         statsTables.fullTrajAnalysis = fullTraj_Stats_Table;
     end

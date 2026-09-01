@@ -81,22 +81,17 @@ printAndSave(final_fig_handles,FDR_corr_analyzed_stats_tables,analysisPrms)
 %% Effect sizes comparisons
 
 % 1. Fields to analyze
-fields_to_analyze = {'react', 'mt', 'mad', 'com', 'tot_dist', 'auc', 'max_vel', 'ra', 'kb_rt', 'head_angle','iep','traj','x_std','vel'};
-
-good_subs = full_stats_tables.good_subs;
+fields_to_analyze = {'react', 'mt', 'mad', 'com', 'tot_dist', 'auc', 'max_vel', 'ra', 'kb_rt', 'head_angle'};
 
 % 2. Significant time windows for full-trajectory measures
 trajectory_windows = struct();
 trajectory_windows.head_angle = [15, 31]; % From sample 15 to sample 31
 trajectory_windows.iep = [15, 34];
 trajectory_windows.traj = [19, 34];
-trajectory_windows.vel = [15,30];
 
 % 3. Cross-flavor comparisons
 cross_flavor_pairs = { ...
-    {{'kb_rt', 'noTrajNorm_noStandardization'}, {'ra', 'TrajNorm_noStandardization'}}, ...
-    {{'kb_rt', 'noTrajNorm_noStandardization'}, {'mt', 'TrajNorm_noStandardization'}}, ...
-    {{'kb_rt', 'noTrajNorm_noStandardization'}, {'tot_dist', 'TrajNorm_noStandardization'}}, ...
+    {{'kb_rt', 'noTrajNorm_noStandardization'}, {'ra', 'TrajNorm_Standardization'}}, ...
     {{'kb_rt', 'noTrajNorm_noStandardization'}, {'mad', 'TrajNorm_noStandardization'}} ...
 };
 
@@ -104,6 +99,7 @@ n_bootstraps = 10000;
 
 first_flavor = matlab.lang.makeValidName(analysisPrms.analysisRounds{2}); % Getting the name of the first round
 data_vector = full_stats_tables.rawAggData.(first_flavor).reach.mad(1).con;
+good_subs = find(~isnan(data_vector) & data_vector ~= 0); % good_subs is identical for all analyses, taking it from a random measure
 
 % 4. Master script
 [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(...
@@ -114,5 +110,3 @@ data_vector = full_stats_tables.rawAggData.(first_flavor).reach.mad(1).con;
     trajectory_windows, ...
     n_bootstraps, ...
     good_subs);
-
-plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl);

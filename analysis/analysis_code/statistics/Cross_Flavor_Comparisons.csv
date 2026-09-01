@@ -1,0 +1,5 @@
+Comparison,Actual_dz_Diff,CI_Lower,CI_Upper,P_Value
+kb_rt(noTrajNorm_noStandardization) _minus_ ra(TrajNorm_noStandardization),0.487407973917853,-0.0802918150445233,1.11874369626186,0.0918
+kb_rt(noTrajNorm_noStandardization) _minus_ mt(TrajNorm_noStandardization),0.0043553078311378,-0.519353297249568,0.562404211903708,0.9628
+kb_rt(noTrajNorm_noStandardization) _minus_ tot_dist(TrajNorm_noStandardization),0.224603869946451,-0.536987067578858,0.935026157017105,0.531
+kb_rt(noTrajNorm_noStandardization) _minus_ mad(TrajNorm_noStandardization),0.319597036106966,-0.405153260139363,1.01906167604065,0.3752

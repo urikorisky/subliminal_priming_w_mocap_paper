@@ -9,6 +9,6 @@
 function stats_table = printTsStats(print_title, clusters)
     stats_table = table(string(print_title),[1:size(clusters,1)]',clusters.('start'), clusters.('end'), clusters.size, clusters.p_val, clusters.dz, clusters.t_star,...
         'VariableNames',{'name','cluster','start_time','end_time','cluster_size','p_val','cohens_dz','t*',});
-    % disp(['----' print_title]);
-    % disp(stats_table);
+    %disp(['----' print_title]);
+    %disp(stats_table);
 end
