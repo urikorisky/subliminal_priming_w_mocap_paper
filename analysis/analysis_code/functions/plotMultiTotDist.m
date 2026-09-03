@@ -22,7 +22,11 @@ function [outStats] = plotMultiTotDist(traj_names, plt_p, p,plotFlag)
         if(plotFlag)
             % Load data and set parameters.
             beesdata = {reach_avg_each(iTraj).tot_dist.con(good_subs), reach_avg_each(iTraj).tot_dist.incon(good_subs)};
-            yLabel = ['Distance ', units];
+            if p.NORMALIZE_WITHIN_SUB
+                yLabel = 'Distance (z-score)';
+            else
+                yLabel = ['Distance ', units];
+            end
             XTickLabels = [];
             colors = {plt_p.con_col, plt_p.incon_col};
             title_char = 'Distance Traveled';
@@ -36,8 +40,19 @@ function [outStats] = plotMultiTotDist(traj_names, plt_p, p,plotFlag)
                 x_data = reshape(get(gca,'XTick'), 2,[]);
                 x_data = repelem(x_data,1,length(good_subs));
                 connect_dots(x_data, y_data);
-                ylim([34 46]);
-                yticks(35 : 2 : 45);
+                if p.NORMALIZE_WITHIN_SUB
+                    y_all = [beesdata{1}(:); beesdata{2}(:)];
+                    min_y = min(y_all, [], 'omitnan');
+                    max_y = max(y_all, [], 'omitnan');
+                    if isempty(min_y) || isnan(min_y) || min_y >= max_y
+                        min_y = -1; max_y = 1;
+                    end
+                    pad = max(0.1, (max_y - min_y) * 0.15);
+                    ylim([min_y - pad, max_y + pad]);
+                else
+                    ylim([34 46]);
+                    yticks(35 : 2 : 45);
+                end
             end
     
             set(gca, 'TickDir','out');

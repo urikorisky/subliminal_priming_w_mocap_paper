@@ -11,7 +11,11 @@ function [outStats] = plotMultiCom(traj_names, plt_p, p,plotFlag)
     
             % Load data and set parameters.
             beesdata = {reach_avg_each(iTraj).com.con(good_subs), reach_avg_each(iTraj).com.incon(good_subs)};
-            yLabel = 'COM per Trial';
+            if p.NORMALIZE_WITHIN_SUB
+                yLabel = 'COM (z-score)';
+            else
+                yLabel = 'COM per Trial';
+            end
             XTickLabels = [];
             colors = {plt_p.con_col, plt_p.incon_col};
             title_char = 'COM';
@@ -25,8 +29,19 @@ function [outStats] = plotMultiCom(traj_names, plt_p, p,plotFlag)
                 x_data = reshape(get(gca,'XTick'), 2,[]);
                 x_data = repelem(x_data,1,length(good_subs));
                 connect_dots(x_data, y_data);
-                ylim([0.5 4]);
-                yticks(0.5 : 0.5 : 3.5);
+                if p.NORMALIZE_WITHIN_SUB
+                    y_all = [beesdata{1}(:); beesdata{2}(:)];
+                    min_y = min(y_all, [], 'omitnan');
+                    max_y = max(y_all, [], 'omitnan');
+                    if isempty(min_y) || isnan(min_y) || min_y >= max_y
+                        min_y = -1; max_y = 1;
+                    end
+                    pad = max(0.1, (max_y - min_y) * 0.15);
+                    ylim([min_y - pad, max_y + pad]);
+                else
+                    ylim([0.5 4]);
+                    yticks(0.5 : 0.5 : 3.5);
+                end
             end
     
             set(gca, 'TickDir','out');

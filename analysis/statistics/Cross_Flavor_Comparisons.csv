@@ -1,0 +1,5 @@
+Comparison,Effect_Size_Diff,CI_Lower,CI_Upper,P_Value
+kb_rt(noTrajNorm_noStandardization) _minus_ ra(TrajNorm_noStandardization),0.487407973917853,-0.0750424850500142,1.12384131199669,0.0896
+kb_rt(noTrajNorm_noStandardization) _minus_ mt(TrajNorm_noStandardization),0.0043553078311378,-0.510207955876403,0.578086340465871,0.9646
+kb_rt(noTrajNorm_noStandardization) _minus_ tot_dist(TrajNorm_noStandardization),0.224603869946451,-0.543353499620532,0.943722104716713,0.523
+kb_rt(noTrajNorm_noStandardization) _minus_ mad(TrajNorm_noStandardization),0.246663959721486,-0.612145145629782,0.976481193870204,0.6376

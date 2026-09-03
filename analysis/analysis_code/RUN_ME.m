@@ -70,13 +70,9 @@ end
 final_fig_handles = analysisPrms.figureHandles;
 full_stats_tables = analysisPrms.statsTables;
 full_stats_tables.analyzed_stats_tables = extract_relevant_statistics(full_stats_tables,'statistics_print_config.csv');
+
 %% Tree-BH FDR correction:
-
-[FDR_corr_analyzed_stats_tables,final_fig_handles.TreeBH] = Calc_and_plot_TreeBH(full_stats_tables);
-% full_stats_tables.FDR_corr_analyzed_stats_tables = FDR_corr_analyzed_stats_tables;
-%% Save all outcomes:
-
-printAndSave(final_fig_handles,FDR_corr_analyzed_stats_tables,analysisPrms)
+[full_stats_tables, final_fig_handles.TreeBH] = Calc_and_plot_TreeBH(full_stats_tables);
 
 %% Effect sizes comparisons
 
@@ -90,7 +86,7 @@ trajectory_windows = struct();
 trajectory_windows.head_angle = [15, 31]; % From sample 15 to sample 31
 trajectory_windows.iep = [15, 34];
 trajectory_windows.traj = [19, 34];
-trajectory_windows.vel = [15,30];
+trajectory_windows.vel = [15, 30];
 
 % 3. Cross-flavor comparisons
 cross_flavor_pairs = { ...
@@ -102,10 +98,7 @@ cross_flavor_pairs = { ...
 
 n_bootstraps = 10000;
 
-first_flavor = matlab.lang.makeValidName(analysisPrms.analysisRounds{2}); % Getting the name of the first round
-data_vector = full_stats_tables.rawAggData.(first_flavor).reach.mad(1).con;
-
-% 4. Master script
+% 4. Master effect size calculation
 [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(...
     full_stats_tables.rawAggData, ...
     fields_to_analyze, ...
@@ -115,4 +108,19 @@ data_vector = full_stats_tables.rawAggData.(first_flavor).reach.mad(1).con;
     n_bootstraps, ...
     good_subs);
 
+% Attach to master struct for unified MAT and XLSX export:
+full_stats_tables.Effect_Sizes = effects_tbl;
+full_stats_tables.Effect_Comparisons_Within = within_tbl;
+full_stats_tables.Effect_Comparisons_Cross = cross_tbl;
+
+%% 5. Normality Assessment, Outlier Detection & Permutation Testing
+[norm_perm_struct, norm_perm_table] = test_normality_and_permutations(full_stats_tables.rawAggData, good_subs);
+full_stats_tables.Normality_and_Permutations = norm_perm_struct;
+full_stats_tables.Normality_and_Permutations_Table = norm_perm_table;
+
+%% Plot effect sizes & QQ plots
 plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl);
+plot_and_save_qq_plots(full_stats_tables.rawAggData, good_subs, analysisPrms.targetFigs_allAnalysesCombined);
+
+%% Save all outcomes (figures, All_Statistics.mat, All_Statistics.xlsx):
+printAndSave(final_fig_handles, full_stats_tables, analysisPrms);

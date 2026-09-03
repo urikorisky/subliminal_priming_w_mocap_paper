@@ -64,7 +64,7 @@ function [updatedStatsTables,treeFig_handle] = Calc_and_plot_TreeBH(statsTables)
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Keyboard RT' & statsTables.analyzed_stats_tables.Within_Participant_Standardization == false),newColName) = g_output.Nodes(9,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Keyboard RT' & statsTables.analyzed_stats_tables.Within_Participant_Standardization == true),newColName) = g_output.Nodes(10,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Reaching Onset'),newColName) = g_output.Nodes(11,'corr_p');
-    statsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Reaching Duration'),newColName) = g_output.Nodes(12,'corr_p');
+    updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Reaching Duration'),newColName) = g_output.Nodes(12,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Num of COM"),newColName) = g_output.Nodes(13,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Total Distance Traveled"),newColName) = g_output.Nodes(14,'corr_p');
     updatedStatsTables.fullTrajAnalysis(find(statsTables.fullTrajAnalysis.name == "Deviation From center"),newColName) = g_output.Nodes(15,'corr_p');

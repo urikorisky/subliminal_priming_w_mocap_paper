@@ -769,12 +769,15 @@ statsTables.good_subs = good_subs;
     else
         p.figureHandles = struct();
     end
+    if ~isfield(p.figureHandles, roundName)
+        p.figureHandles.(roundName) = struct();
+    end
     
     %% - Fig. 2 + Supp. Fig. 3
     if(~p.NORM_TRAJ)
         [RecogFigHandles,Recog_Stats] = plotMultiRecognition_SepByCong('good_subs', traj_names{1}{1}, plt_p, p);
-        p.figureHandles.fig2 = RecogFigHandles.incon;
-        p.figureHandles.suppFig3 = RecogFigHandles.con;
+        p.figureHandles.(roundName).fig2 = RecogFigHandles.incon;
+        p.figureHandles.(roundName).suppFig3 = RecogFigHandles.con;
 
         statsTables.Prime_Performance_Stats = Recog_Stats;
     end
@@ -788,7 +791,7 @@ statsTables.good_subs = good_subs;
         iDesig = 1;
         % Create figure for each sub.
         for iSub = subs_to_present
-            sub_f(iSub,1) = figure('Name',[' Figure 3)' subFigsDesignation{iDesig} '  Sub ' num2str(iSub)], 'Position',[597 84 602 760], 'MenuBar','figure');
+            sub_f(iSub,1) = figure('Name',[' Figure 3)' subFigsDesignation{iDesig} '  Sub ' num2str(iSub) ' - ' roundName], 'Position',[597 84 602 760], 'MenuBar','figure');
             theme light;
             iDesig = iDesig + 1;
         end 
@@ -797,69 +800,53 @@ statsTables.good_subs = good_subs;
             figure(sub_f(iSub,1));
             plotAllTrajs(iSub, traj_names, plt_p, p);
         end
-        p.figureHandles.fig_3_ik = sub_f(53,1);
-        figure(p.figureHandles.fig_3_ik);
+        p.figureHandles.(roundName).fig_3_ik = sub_f(53,1);
+        figure(p.figureHandles.(roundName).fig_3_ik);
         title('Figure 3) i,k');
-        p.figureHandles.fig_3_jl = sub_f(59,1);
-        figure(p.figureHandles.fig_3_jl);
+        p.figureHandles.(roundName).fig_3_jl = sub_f(59,1);
+        figure(p.figureHandles.(roundName).fig_3_jl);
         title('Figure 3) j,l');
     end
 
     %% - Fig.3 a-h
     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 
-    fig3_ah_exists = false;
-    if(isfield(p,'figureHandles'))
-        if (isfield(p.figureHandles,'fig_3_ah'))
-            fig3_ah_exists = true;
-        end
-    end
-    if(~fig3_ah_exists)
-        fig_3_ah_handle = figure('Name',['All Subs'], 'WindowState','maximized', 'MenuBar','figure');
-        p.figureHandles.fig_3_ah = fig_3_ah_handle;
-    else
-        fig_3_ah_handle = p.figureHandles.fig_3_ah;
-    end
+    fig_3_ah_handle = figure('Name',['All Subs - ' roundName], 'WindowState','maximized', 'MenuBar','figure');
+    p.figureHandles.(roundName).fig_3_ah = fig_3_ah_handle;
 
-    plotNormTrajNonSTD_flag = false;
-    if(p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
-        plotNormTrajNonSTD_flag = true;
-    end
-
+    plotFlag = true;
 
     % ------- Avg traj with shade -------
     figure(fig_3_ah_handle);
     subplot(2,10,[2:5]);
-    plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
-    
+    plotMultiAvgTrajWithShade(traj_names, plt_p, p, plotFlag);
 
     % ------- Response Times Keyboard -------
-        figure(fig_3_ah_handle);
-        subplot(2,5,4);
-        KB_RT_stats = plotMultiKeyboardRt(traj_names, plt_p, p);
-        currStatsTable = transferStatsToStatsTable(KB_RT_stats,currStatsTable);
-        % save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
+    figure(fig_3_ah_handle);
+    subplot(2,5,4);
+    KB_RT_stats = plotMultiKeyboardRt(traj_names, plt_p, p);
+    currStatsTable = transferStatsToStatsTable(KB_RT_stats,currStatsTable);
+    % save([p.PROC_DATA_FOLDER '/keyboard_rt_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
 
     % ------- Reach Area -------
     % Area between avg left traj and avg right traj (in each condition).
     figure(fig_3_ah_handle);
     subplot(2,5,5);
-    ReachArea_Stats = plotMultiReachArea(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    ReachArea_Stats = plotMultiReachArea(traj_names, plt_p, p, plotFlag);
     currStatsTable = transferStatsToStatsTable(ReachArea_Stats,currStatsTable);
     % save([p.PROC_DATA_FOLDER '/ra_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
 
     % ------- MAD -------
     figure(fig_3_ah_handle);
     subplot(2,5,6);
-    MAD_Stats = plotMultiMad_CongIncong(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    MAD_Stats = plotMultiMad_CongIncong(traj_names, plt_p, p, plotFlag);
     currStatsTable = transferStatsToStatsTable(MAD_Stats,currStatsTable);
     % save([p.PROC_DATA_FOLDER '/reach_mad_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
-
 
     % ------- React + Movement + Response Times Reaching -------
     figure(fig_3_ah_handle);
     subplot_p = [2,5,9; 2,5,7];
-    [Reach_RT_Stats,Reach_MT_Stats] = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p,plotNormTrajNonSTD_flag);
+    [Reach_RT_Stats,Reach_MT_Stats] = plotMultiReactMtRt(traj_names, subplot_p, plt_p, p, plotFlag);
     currStatsTable = transferStatsToStatsTable(Reach_RT_Stats,currStatsTable);
     currStatsTable = transferStatsToStatsTable(Reach_MT_Stats,currStatsTable);
     % p_val = react_mt_rt_p_val.react;
@@ -870,7 +857,7 @@ statsTables.good_subs = good_subs;
     % ------- Total distance traveled -------
     figure(fig_3_ah_handle);
     subplot(2,5,8);
-    Total_Distance_Stats = plotMultiTotDist(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    Total_Distance_Stats = plotMultiTotDist(traj_names, plt_p, p, plotFlag);
     % save([p.PROC_DATA_FOLDER '/tot_dist_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
     currStatsTable = transferStatsToStatsTable(Total_Distance_Stats,currStatsTable);
 
@@ -878,7 +865,7 @@ statsTables.good_subs = good_subs;
     % Number of changes of mind.
     figure(fig_3_ah_handle);
     subplot(2,5,10);
-    COM_Stats = plotMultiCom(traj_names, plt_p, p,plotNormTrajNonSTD_flag);
+    COM_Stats = plotMultiCom(traj_names, plt_p, p, plotFlag);
     % save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
     currStatsTable = transferStatsToStatsTable(COM_Stats,currStatsTable);
 
@@ -944,7 +931,7 @@ statsTables.good_subs = good_subs;
         fullTraj_Stats_Table = transferStatsToStatsTable(HeadingAngle_Clusters_Stats,fullTraj_Stats_Table);
         figure(fig4Handle);
         tightfig();
-        p.figureHandles.fig4 = fig4Handle;
+        p.figureHandles.(roundName).fig4 = fig4Handle;
         %% Supp. Fig. 4
         good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
     
@@ -958,7 +945,7 @@ statsTables.good_subs = good_subs;
     
         figure(suppFig4Handle);
         tightfig();
-        p.figureHandles.suppfig4 = suppFig4Handle;
+        p.figureHandles.(roundName).suppfig4 = suppFig4Handle;
 
         % --------- Velocity Profile ---------
         figure(); % Temporary separate figure
@@ -969,5 +956,5 @@ statsTables.good_subs = good_subs;
     end
 
     figureHandles = p.figureHandles;
-    statsTables.(analysisParameters.analysisRounds{roundNum}) = currStatsTable;
+    statsTables.(roundName) = currStatsTable;
 end

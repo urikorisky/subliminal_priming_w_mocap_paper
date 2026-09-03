@@ -7,7 +7,7 @@ function [outStatsRT,outStatsMT] = plotMultiReactMtRt(traj_names, subplot_p, plt
     units = '(ms)';
     % When normalized, no units.
     if p.NORMALIZE_WITHIN_SUB
-        units = '';
+        units = '(z-score)';
     end
     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{1}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
     outStatsTables = {};
@@ -40,8 +40,19 @@ function [outStatsRT,outStatsMT] = plotMultiReactMtRt(traj_names, subplot_p, plt
                     x_data = reshape(get(gca,'XTick'), 2,[]);
                     x_data = repelem(x_data,1,length(good_subs));
                     connect_dots(x_data, y_data);
-                    ylim([100 750]);
-                    yticks(100 : 200 : 700);
+                    if p.NORMALIZE_WITHIN_SUB
+                        y_all = [beesdata{1}(:); beesdata{2}(:)];
+                        min_y = min(y_all, [], 'omitnan');
+                        max_y = max(y_all, [], 'omitnan');
+                        if isempty(min_y) || isnan(min_y) || min_y >= max_y
+                            min_y = -1; max_y = 1;
+                        end
+                        pad = max(0.1, (max_y - min_y) * 0.15);
+                        ylim([min_y - pad, max_y + pad]);
+                    else
+                        ylim([100 750]);
+                        yticks(100 : 200 : 700);
+                    end
                 end
                 
                 set(gca, 'TickDir','out');

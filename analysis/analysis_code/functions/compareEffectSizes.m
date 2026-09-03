@@ -40,11 +40,23 @@ function [effects_table, comparisons_table] = compareEffectSizes(reach_data, key
         
         % --- CALCULATE ACTUAL POINT ESTIMATE (ABSOLUTE VALUE) ---
         diff_actual = data1 - data2;
-        actual_dz = abs(mean(diff_actual) / std(diff_actual));
-        actual_dzs_struct.(f) = actual_dz;
+        cohen_dz = abs(mean(diff_actual) / std(diff_actual));
         
-        % --- RUN BOOTSTRAP ---
-        dist = bootCohenDz(data1, data2, master_boot_indices);
+        % Outlier check
+        q1 = prctile(diff_actual, 25);
+        q3 = prctile(diff_actual, 75);
+        iqr_val = q3 - q1;
+        has_outliers = any(diff_actual < (q1 - 1.5 * iqr_val) | diff_actual > (q3 + 1.5 * iqr_val));
+        dep_akp_val = abs(calc_dependent_akp(data1, data2));
+        
+        if has_outliers
+            actual_dz = dep_akp_val;
+            dist = bootDependentAKP(data1, data2, master_boot_indices);
+        else
+            actual_dz = cohen_dz;
+            dist = bootCohenDz(data1, data2, master_boot_indices);
+        end
+        actual_dzs_struct.(f) = actual_dz;
         distributions.(f) = dist;
         
         % Store for table
@@ -57,8 +69,8 @@ function [effects_table, comparisons_table] = compareEffectSizes(reach_data, key
     end
     
     % Generate and print Effects Table
-    effects_table = table(effect_names,actual_diffs,actual_diffs_SD, actual_dzs, ci_lowers, ci_uppers, ...
-        'VariableNames', {'Effect_Name','Actual Diff','SD(Act_Diff)', 'Actual_dz', 'CI_Lower', 'CI_Upper'});
+    effects_table = table(effect_names, actual_diffs, actual_diffs_SD, actual_dzs, ci_lowers, ci_uppers, ...
+        'VariableNames', {'Effect_Name', 'Mean_Diff', 'SD_Diff', 'Reported_Effect_Size', 'CI_Lower', 'CI_Upper'});
     
     fprintf('\n--- Individual Effect Sizes (Absolute, 95%% CI) ---\n');
     disp(effects_table);
@@ -103,7 +115,7 @@ function [effects_table, comparisons_table] = compareEffectSizes(reach_data, key
     
     % Generate and print Comparisons Table
     comparisons_table = table(comp_names, actual_diffs, comp_ci_lowers, comp_ci_uppers, p_values, ...
-        'VariableNames', {'Comparison', 'Actual_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
+        'VariableNames', {'Comparison', 'Effect_Size_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
         
     fprintf('\n--- Pairwise Comparisons of Magnitudes (95%% CI) ---\n');
     disp(comparisons_table);
@@ -117,4 +129,32 @@ function [boot_dz] = bootCohenDz(data1, data2, boot_indices)
     boot_stds  = std(boot_samples, 0, 1);
     % Take the absolute value for the entire distribution!
     boot_dz    = abs(boot_means ./ boot_stds);
+    boot_dz    = boot_dz(:);
+end
+
+function [boot_dakp] = bootDependentAKP(data1, data2, boot_indices)
+    differences = data1 - data2;
+    n_boots = size(boot_indices, 2);
+    boot_dakp = zeros(n_boots, 1);
+    n = size(differences, 1);
+    tr = 0.20;
+    g = floor(tr * n);
+    z_tr = norminv(1 - tr);
+    phi_z = normpdf(z_tr);
+    cterm = sqrt((erf(z_tr / sqrt(2)) - 2 * z_tr * phi_z) + 2 * (z_tr^2) * tr);
+    
+    for b = 1:n_boots
+        bd = differences(boot_indices(:, b));
+        sbd = sort(bd);
+        win = bd;
+        win(win <= sbd(g + 1)) = sbd(g + 1);
+        win(win >= sbd(end - g)) = sbd(end - g);
+        sw = std(win);
+        if sw > 0
+            boot_dakp(b) = abs(cterm * trimmean(bd, 2 * tr * 100) / sw);
+        else
+            boot_dakp(b) = NaN;
+        end
+    end
+    boot_dakp = boot_dakp(:);
 end

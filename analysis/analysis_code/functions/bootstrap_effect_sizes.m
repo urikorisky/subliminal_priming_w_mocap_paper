@@ -14,8 +14,12 @@ function [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(rawAggDat
     total_effects = num_flavors * length(fields_to_analyze);
     flavor_names  = strings(total_effects, 1);
     effect_names  = strings(total_effects, 1);
+    metric_names  = strings(total_effects, 1);
+    has_outlier_flags = false(total_effects, 1);
     raw_mean_diffs = NaN(total_effects, 1);
     raw_sd_diffs   = NaN(total_effects, 1);
+    cohens_dzs    = NaN(total_effects, 1);
+    dep_akps      = NaN(total_effects, 1);
     actual_dzs    = NaN(total_effects, 1);
     ci_lowers     = NaN(total_effects, 1);
     ci_uppers     = NaN(total_effects, 1);
@@ -77,28 +81,54 @@ function [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(rawAggDat
             % Aggregate across timepoints for the final scalar values in the table
             mean_diff = mean(mean_diff_per_time, 'omitnan');
             sd_diff = mean(sd_diff_per_time, 'omitnan');
-            actual_dz = abs(mean(dz_per_time, 'omitnan'));
+            cohen_dz_val = abs(mean(dz_per_time, 'omitnan'));
             
-            actual_dzs_store.(flavor).(f) = actual_dz;
+            % Outlier screening (1.5 * IQR) and Dependent AKP
+            if size(diff_actual, 2) == 1
+                q1 = prctile(diff_actual, 25);
+                q3 = prctile(diff_actual, 75);
+                iqr_val = q3 - q1;
+                has_outliers = any(diff_actual < (q1 - 1.5 * iqr_val) | diff_actual > (q3 + 1.5 * iqr_val));
+                dep_akp_val = abs(calc_dependent_akp(data1, data2));
+            else
+                has_outliers = false;
+                dep_akp_val = cohen_dz_val;
+            end
             
-            % Run Bootstrap and store distribution
-            dist = bootCohenDz(data1, data2, master_boot_indices);
+            % Assign reported effect size & bootstrap distribution
+            if has_outliers
+                reported_eff = dep_akp_val;
+                metric_name  = "Dependent_AKP";
+                dist = bootDependentAKP(data1, data2, master_boot_indices);
+            else
+                reported_eff = cohen_dz_val;
+                metric_name  = "Cohen_dz";
+                dist = bootCohenDz(data1, data2, master_boot_indices);
+            end
+            
+            actual_dzs_store.(flavor).(f) = reported_eff;
             dist_store.(flavor).(f) = dist;
             
             % Store for the table
-            flavor_names(idx)   = string(flavor);
-            effect_names(idx)   = string(f);
-            raw_mean_diffs(idx) = mean_diff;
-            raw_sd_diffs(idx)   = sd_diff;
-            actual_dzs(idx)     = actual_dz;
-            ci_lowers(idx)      = prctile(dist, 2.5);
-            ci_uppers(idx)      = prctile(dist, 97.5);
+            flavor_names(idx)      = string(flavor);
+            effect_names(idx)      = string(f);
+            metric_names(idx)      = metric_name;
+            has_outlier_flags(idx) = has_outliers;
+            raw_mean_diffs(idx)    = mean_diff;
+            raw_sd_diffs(idx)      = sd_diff;
+            cohens_dzs(idx)        = cohen_dz_val;
+            dep_akps(idx)          = dep_akp_val;
+            actual_dzs(idx)        = reported_eff;
+            ci_lowers(idx)         = prctile(dist, 2.5);
+            ci_uppers(idx)         = prctile(dist, 97.5);
             idx = idx + 1;
         end
     end
     
-    effects_tbl = table(flavor_names, effect_names, raw_mean_diffs, raw_sd_diffs, actual_dzs, ci_lowers, ci_uppers, ...
-        'VariableNames', {'Flavor', 'Effect', 'Actual_Diff', 'SD_Act_Diff', 'Actual_dz', 'CI_Lower', 'CI_Upper'});
+    effects_tbl = table(flavor_names, effect_names, metric_names, has_outlier_flags, raw_mean_diffs, raw_sd_diffs, ...
+        actual_dzs, cohens_dzs, dep_akps, ci_lowers, ci_uppers, ...
+        'VariableNames', {'Flavor', 'Effect', 'Metric_Used', 'Has_Outliers', 'Mean_Diff', 'SD_Diff', ...
+                          'Reported_Effect_Size', 'Cohens_dz', 'Dependent_AKP', 'CI_Lower', 'CI_Upper'});
     fprintf('\n--- Individual Effect Sizes (Absolute, 95%% CI) ---\n');
     disp(effects_tbl);
     
@@ -144,7 +174,7 @@ function [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(rawAggDat
     end
     
     within_tbl = table(wf_flavor_names, wf_comp_names, wf_actual_diffs, wf_ci_lowers, wf_ci_uppers, wf_p_values, ...
-        'VariableNames', {'Flavor', 'Comparison', 'Actual_dz_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
+        'VariableNames', {'Flavor', 'Comparison', 'Effect_Size_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
     fprintf('\n--- Within-Flavor Pairwise Comparisons ---\n');
     disp(within_tbl);
     
@@ -183,7 +213,7 @@ function [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(rawAggDat
     
     if num_cross > 0
         cross_tbl = table(cf_comp_names, cf_actual_diffs, cf_ci_lowers, cf_ci_uppers, cf_p_values, ...
-            'VariableNames', {'Comparison', 'Actual_dz_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
+            'VariableNames', {'Comparison', 'Effect_Size_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
         fprintf('\n--- Cross-Flavor Explicit Comparisons ---\n');
         disp(cross_tbl);
     else
@@ -216,4 +246,40 @@ function [boot_dz] = bootCohenDz(data1, data2, boot_indices)
         % Average the dz values across time, THEN take absolute
         boot_dz = abs(mean(boot_dz_per_time, 1, 'omitnan'));
     end
+    boot_dz = boot_dz(:);
+end
+
+function [boot_dakp] = bootDependentAKP(data1, data2, boot_indices)
+    differences = data1 - data2;
+    n_boots = size(boot_indices, 2);
+    T = size(differences, 2);
+    
+    if T == 1
+        % 1D scalar case: robust Dependent AKP on each bootstrap resample
+        boot_dakp = zeros(n_boots, 1);
+        n = size(differences, 1);
+        tr = 0.20;
+        g = floor(tr * n);
+        z_tr = norminv(1 - tr);
+        phi_z = normpdf(z_tr);
+        cterm = sqrt((erf(z_tr / sqrt(2)) - 2 * z_tr * phi_z) + 2 * (z_tr^2) * tr);
+        
+        for b = 1:n_boots
+            bd = differences(boot_indices(:, b));
+            sbd = sort(bd);
+            win = bd;
+            win(win <= sbd(g + 1)) = sbd(g + 1);
+            win(win >= sbd(end - g)) = sbd(end - g);
+            sw = std(win);
+            if sw > 0
+                boot_dakp(b) = abs(cterm * trimmean(bd, 2 * tr * 100) / sw);
+            else
+                boot_dakp(b) = NaN;
+            end
+        end
+    else
+        % Time-series fallback
+        boot_dakp = bootCohenDz(data1, data2, boot_indices);
+    end
+    boot_dakp = boot_dakp(:);
 end

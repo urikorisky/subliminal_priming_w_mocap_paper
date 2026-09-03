@@ -12,7 +12,11 @@ function [outStats] = plotMultiMad_CongIncong(traj_names, plt_p, p,plotFlag)
             if(plotFlag)
                 % Load data and set aparms.
                 beesdata = {reach_avg_each.mad.con(good_subs) reach_avg_each.mad.incon(good_subs)};
-                yLabel = 'MAD (cm)';
+                if p.NORMALIZE_WITHIN_SUB
+                    yLabel = 'MAD (z-score)';
+                else
+                    yLabel = 'MAD (cm)';
+                end
                 XTickLabels = ["Congruent","Incongruent"];
                 colors = {plt_p.con_col, plt_p.incon_col};
                 title_char = 'MAD';
@@ -26,11 +30,20 @@ function [outStats] = plotMultiMad_CongIncong(traj_names, plt_p, p,plotFlag)
                     x_data = reshape(get(gca,'XTick'), 2,[]);
                     x_data = repelem(x_data,1,length(good_subs));
                     connect_dots(x_data, y_data);
-                    ylims=ylim();
-                    ylim([ylims(1),ylims(2)*1.2]);
-                    yticklabels(cellfun(@(x) round(100*str2double(x)), yticklabels));
-                    
-                    % yticks(0.5 : 0.5 : 3.5);
+                    if p.NORMALIZE_WITHIN_SUB
+                        y_all = [beesdata{1}(:); beesdata{2}(:)];
+                        min_y = min(y_all, [], 'omitnan');
+                        max_y = max(y_all, [], 'omitnan');
+                        if isempty(min_y) || isnan(min_y) || min_y >= max_y
+                            min_y = -1; max_y = 1;
+                        end
+                        pad = max(0.1, (max_y - min_y) * 0.15);
+                        ylim([min_y - pad, max_y + pad]);
+                    else
+                        ylims=ylim();
+                        ylim([ylims(1),ylims(2)*1.2]);
+                        yticklabels(cellfun(@(x) round(100*str2double(x)), yticklabels));
+                    end
                 end
                 
                 ticks = get(gca,'XTick');

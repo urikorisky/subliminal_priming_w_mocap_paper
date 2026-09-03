@@ -2,7 +2,7 @@ function plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl)
     %% Generate Horizontal Whisker Plots and Save Data
     
     out_dir_stats = '../statistics/';
-    out_dir_figs = '../figures/';
+    out_dir_figs = fullfile('../figures/', 'Effect_Sizes');
     if ~exist(out_dir_stats, 'dir'), mkdir(out_dir_stats); end
     if ~exist(out_dir_figs, 'dir'), mkdir(out_dir_figs); end
     
@@ -37,22 +37,22 @@ function plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl)
             end
         end
         
-        err_neg = sub_tbl.Actual_dz - sub_tbl.CI_Lower;
-        err_pos = sub_tbl.CI_Upper - sub_tbl.Actual_dz;
+        err_neg = sub_tbl.Reported_Effect_Size - sub_tbl.CI_Lower;
+        err_pos = sub_tbl.CI_Upper - sub_tbl.Reported_Effect_Size;
         
-        errorbar(sub_tbl.Actual_dz, y, err_neg, err_pos, 'horizontal', 'o', ...
+        errorbar(sub_tbl.Reported_Effect_Size, y, err_neg, err_pos, 'horizontal', 'o', ...
             'LineWidth', 1.5, 'MarkerSize', 8, 'MarkerFaceColor', 'b', 'CapSize', 10);
         
         set(gca, 'YTick', y, 'YTickLabel', readable_vars, 'FontSize', 12);
-        xlabel('Cohen''s d_z', 'FontSize', 14);
+        xlabel('Standardized Effect Size (d_z / Dependent AKP)', 'FontSize', 14);
         
         title_str = strrep(f, '_', ' ');
-        title(sprintf('Effect Sizes (d_z) - %s', title_str), 'FontSize', 16, 'Interpreter', 'none');
+        title(sprintf('Standardized Effect Sizes - %s', title_str), 'FontSize', 16, 'Interpreter', 'none');
         
         % Add text labels
         for j = 1:length(y)
             % Format without 0 for values > 1 or <-1
-            val_str = sprintf('%.2f', sub_tbl.Actual_dz(j));
+            val_str = sprintf('%.2f', sub_tbl.Reported_Effect_Size(j));
             low_str = sprintf('%.2f', sub_tbl.CI_Lower(j));
             up_str = sprintf('%.2f', sub_tbl.CI_Upper(j));
             
@@ -71,11 +71,11 @@ function plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl)
         saveas(fig, fullfile(out_dir_figs, sprintf('Effect_Sizes_%s.svg', f)));
     end
     
-    %% Plot 2: dz difference vs KB_RT across ALL flavors
+    %% Plot 2: Effect Size difference vs KB_RT across ALL flavors
     kb_idx = contains(within_tbl.Comparison, 'kb_rt');
     kb_tbl = within_tbl(kb_idx, :);
     
-    fig2 = figure('Name', 'dz Difference vs KB_RT', 'Position', [100 100 1200 800]);
+    fig2 = figure('Name', 'Effect Size Differences vs KB_RT', 'Position', [100 100 1200 800]);
     hold on;
     y = 1:height(kb_tbl); % fallback for limits if needed
     
@@ -119,12 +119,12 @@ function plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl)
         comp_parts = split(kb_tbl.Comparison(j), '_minus_');
         if strcmp(comp_parts{1}, 'kb_rt')
             var_name = comp_parts{2};
-            actual_diff_array(j) = -kb_tbl.Actual_dz_Diff(j);
+            actual_diff_array(j) = -kb_tbl.Effect_Size_Diff(j);
             ci_lower_array(j) = -kb_tbl.CI_Upper(j);
             ci_upper_array(j) = -kb_tbl.CI_Lower(j);
         else
             var_name = comp_parts{1};
-            actual_diff_array(j) = kb_tbl.Actual_dz_Diff(j);
+            actual_diff_array(j) = kb_tbl.Effect_Size_Diff(j);
             ci_lower_array(j) = kb_tbl.CI_Lower(j);
             ci_upper_array(j) = kb_tbl.CI_Upper(j);
         end
@@ -148,7 +148,7 @@ function plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl)
     sorted_labels = y_labels(sort_idx);
     set(gca, 'YTick', sorted_y, 'YTickLabel', sorted_labels, 'FontSize', 10);
     ylim([0 y_current]);
-    xlabel('\Delta Cohen''s d_z (Variable - KB RT)', 'FontSize', 14);
+    xlabel('\Delta Standardized Effect Size (Variable - KB RT)', 'FontSize', 14);
     title('Effect Size Differences Compared to KB RT', 'FontSize', 16);
     xline(0, 'k--', 'LineWidth', 1.5);
     
