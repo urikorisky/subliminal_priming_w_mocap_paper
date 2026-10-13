@@ -28,9 +28,18 @@ function [updatedStatsTables,treeFig_handle] = Calc_and_plot_TreeBH(statsTables)
     mt_p_val = statsTables.analyzed_stats_tables.pVal(statsTables.analyzed_stats_tables.name == 'Reaching Duration');
     com_p_val = statsTables.analyzed_stats_tables.pVal(statsTables.analyzed_stats_tables.name == "Num of COM");
     tot_dist_p_val = statsTables.analyzed_stats_tables.pVal(statsTables.analyzed_stats_tables.name == "Total Distance Traveled");
-    devFromCent_clust1_p_val = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Deviation From center");
-    iEP_clust1_p_val = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "iEP");
-    headingAngle_clust1_p_val = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Heading angle");
+    if ismember('Flavor', statsTables.fullTrajAnalysis.Properties.VariableNames)
+        dev_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Deviation From center" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+        iep_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "iEP" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+        head_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Heading angle" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+    else
+        dev_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Deviation From center");
+        iep_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "iEP");
+        head_p = statsTables.fullTrajAnalysis.p_val(statsTables.fullTrajAnalysis.name == "Heading angle");
+    end
+    devFromCent_clust1_p_val = dev_p(1);
+    iEP_clust1_p_val = iep_p(1);
+    headingAngle_clust1_p_val = head_p(1);
     ra_p_val = statsTables.analyzed_stats_tables.pVal(statsTables.analyzed_stats_tables.name == "Reach Area");
     mad_p_val = statsTables.analyzed_stats_tables.pVal(statsTables.analyzed_stats_tables.name == "Maximum Absolute Deviation (MAD)");
 
@@ -67,9 +76,18 @@ function [updatedStatsTables,treeFig_handle] = Calc_and_plot_TreeBH(statsTables)
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == 'Reaching Duration'),newColName) = g_output.Nodes(12,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Num of COM"),newColName) = g_output.Nodes(13,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Total Distance Traveled"),newColName) = g_output.Nodes(14,'corr_p');
-    updatedStatsTables.fullTrajAnalysis(find(statsTables.fullTrajAnalysis.name == "Deviation From center"),newColName) = g_output.Nodes(15,'corr_p');
-    updatedStatsTables.fullTrajAnalysis(find(statsTables.fullTrajAnalysis.name == "iEP"),newColName) = g_output.Nodes(16,'corr_p');
-    updatedStatsTables.fullTrajAnalysis(find(statsTables.fullTrajAnalysis.name == "Heading angle"),newColName) = g_output.Nodes(17,'corr_p');
+    if ismember('Flavor', statsTables.fullTrajAnalysis.Properties.VariableNames)
+        idx_dev = find(statsTables.fullTrajAnalysis.name == "Deviation From center" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+        idx_iep = find(statsTables.fullTrajAnalysis.name == "iEP" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+        idx_head = find(statsTables.fullTrajAnalysis.name == "Heading angle" & statsTables.fullTrajAnalysis.Flavor == "noTrajNorm_noStandardization");
+    else
+        idx_dev = find(statsTables.fullTrajAnalysis.name == "Deviation From center");
+        idx_iep = find(statsTables.fullTrajAnalysis.name == "iEP");
+        idx_head = find(statsTables.fullTrajAnalysis.name == "Heading angle");
+    end
+    updatedStatsTables.fullTrajAnalysis(idx_dev, newColName) = g_output.Nodes(15,'corr_p');
+    updatedStatsTables.fullTrajAnalysis(idx_iep, newColName) = g_output.Nodes(16,'corr_p');
+    updatedStatsTables.fullTrajAnalysis(idx_head, newColName) = g_output.Nodes(17,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Reach Area"),newColName) = g_output.Nodes(18,'corr_p');
     updatedStatsTables.analyzed_stats_tables(find(statsTables.analyzed_stats_tables.name == "Maximum Absolute Deviation (MAD)"),newColName) = g_output.Nodes(19,'corr_p');
 

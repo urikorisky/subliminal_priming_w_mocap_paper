@@ -57,15 +57,21 @@ function [effects_tbl, within_tbl, cross_tbl] = bootstrap_effect_sizes(rawAggDat
             data1 = data1_raw(good_subs, :);
             data2 = data2_raw(good_subs, :);
             
-            % Handle Trajectory Window Averaging (Match permCluster logic)
-            if isfield(trajectory_windows, f)
+            % Handle Trajectory Window Averaging (Dynamic per-flavor cluster windows)
+            win = [];
+            if isfield(trajectory_windows, flavor) && isfield(trajectory_windows.(flavor), f)
+                win = trajectory_windows.(flavor).(f);
+            elseif isfield(trajectory_windows, f)
                 win = trajectory_windows.(f);
-                % Extract just the time window, but DO NOT average across time yet!
+            end
+            
+            if ~isempty(win)
+                % Extract just the cluster window, but DO NOT average across time/points yet!
                 data1 = data1(:, win(1):win(2));
                 data2 = data2(:, win(1):win(2));
             elseif size(data1, 2) > 1
-                warning('Field %s is a time-series but no window was provided in trajectory_windows. Using ALL timepoints.', f);
-                % Keep all timepoints, no averaging yet.
+                warning('Field %s in flavor %s is a trajectory but no cluster window was provided. Using ALL points.', f, flavor);
+                % Keep all timepoints/points, no averaging yet.
             end
             
             % Calculate actual raw differences

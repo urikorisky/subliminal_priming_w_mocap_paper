@@ -81,12 +81,12 @@ fields_to_analyze = {'react', 'mt', 'mad', 'com', 'tot_dist', 'auc', 'max_vel', 
 
 good_subs = full_stats_tables.good_subs;
 
-% 2. Significant time windows for full-trajectory measures
-trajectory_windows = struct();
-trajectory_windows.head_angle = [15, 31]; % From sample 15 to sample 31
-trajectory_windows.iep = [15, 34];
-trajectory_windows.traj = [19, 34];
-trajectory_windows.vel = [15, 30];
+% 2. Dynamic cluster windows from permutation tests for full-trajectory measures
+if isfield(full_stats_tables, 'dynamic_trajectory_windows')
+    trajectory_windows = full_stats_tables.dynamic_trajectory_windows;
+else
+    trajectory_windows = struct();
+end
 
 % 3. Cross-flavor comparisons
 cross_flavor_pairs = { ...
@@ -114,7 +114,7 @@ full_stats_tables.Effect_Comparisons_Within = within_tbl;
 full_stats_tables.Effect_Comparisons_Cross = cross_tbl;
 
 %% 5. Normality Assessment, Outlier Detection & Permutation Testing
-[norm_perm_struct, norm_perm_table] = test_normality_and_permutations(full_stats_tables.rawAggData, good_subs);
+[norm_perm_struct, norm_perm_table] = test_normality_and_permutations(full_stats_tables.rawAggData, good_subs, trajectory_windows);
 full_stats_tables.Normality_and_Permutations = norm_perm_struct;
 full_stats_tables.Normality_and_Permutations_Table = norm_perm_table;
 

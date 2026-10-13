@@ -1,0 +1,151 @@
+================================================================================
+PROJECT SUMMARY & STATISTICAL FRAMEWORK FOR EXTERNAL GEMINI INSTANCE
+Subliminal Priming with 3D Motion Capture vs. Keyboard Responses
+================================================================================
+
+--------------------------------------------------------------------------------
+1. SCIENTIFIC CONTEXT & RESEARCH QUESTION
+--------------------------------------------------------------------------------
+This project investigates unconscious (subliminal) cognitive processing using 3D motion tracking (Optotrak motion capture of reaching trajectories) compared to traditional discrete keypresses (keyboard reaction times).
+
+Core Scientific Question:
+Does continuous 3D reaching movement provide higher statistical sensitivity, richer temporal dynamics, and deeper insights into subliminal motor priming compared to discrete response times?
+
+Experimental Paradigm (Within-Subjects):
+- Participants are presented with a subliminal prime (arrow or symbolic cue) followed by a visible target instructing a rapid left or right choice.
+- Conditions: Congruent (prime matches target) vs. Incongruent (prime opposes target).
+- Modalities:
+  1. Keyboard task: Discrete choice reaction time.
+  2. Reaching task: Continuous 3D hand reaching from a starting switch to a touch screen.
+- Reaching Movement Phases:
+  * Motor Initiation (Latency): "Reaching Onset" (react) = time from target presentation until hand lift-off (velocity and acceleration thresholds).
+  * Motor Execution (Flight): "Reaching Duration" (mt) = time from lift-off to screen contact (maximum Z).
+  * Continuous Path Dynamics: Continuous spatial steering and lateral curvature across the reaching trajectory.
+
+--------------------------------------------------------------------------------
+2. PREPROCESSING FLAVORS & TRAJECTORY RESOLUTIONS
+--------------------------------------------------------------------------------
+The dataset is analyzed across 3 distinct methodological flavors:
+
+1. TrajNorm_noStandardization (Normalized Spatial Domain):
+   * This is the ORIGINAL PRE-REGISTERED trajectory analysis.
+   * Trajectories are resampled using Functional Data Analysis (FDA) into 200 spatial points (0.5% of path per point, 0% to 100% of the movement path traveled from start to touch screen).
+   * In the pre-registration diagram, the X-axis for trajectory clustering is explicitly defined as "Proportion of Z traveled".
+   * Slices strictly represent the movement flight from movement onset to screen touch (pre-movement reaction time is excluded and analyzed separately as Reaching Onset).
+
+2. noTrajNorm_noStandardization (Unnormalized Time Domain):
+   * Added later as an alternate temporal perspective.
+   * Fixed time cutoff of 34 samples (0 to 340 ms at 100 Hz sampling rate = 10 ms per sample).
+   * Trajectories represent absolute physical progression over time.
+
+3. TrajNorm_Standardization (Within-Participant Z-Scored):
+   * Discrete trial-level metrics (e.g. trial RT, Reach Area, MAD) are z-scored within each participant.
+   * Continuous trajectory matrices (traj, iep, head_angle, x_std) are identical to TrajNorm_noStandardization because standardization is only applied to scalar trial metrics.
+
+--------------------------------------------------------------------------------
+3. MEASURES & GEOMETRIC DEFINITIONS (CONCEPTUAL ONLY)
+--------------------------------------------------------------------------------
+
+A. Discrete Reaching Metrics:
+- Reach Area (ra):
+  * Definition: Geometric surface area enclosed between the subject's average Left-reach trajectory and average Right-reach trajectory.
+  * Meaning: Bilateral spatial flaring/separation. In Congruent trials, left reaches flare further left and right reaches flare further right (Congruent > Incongruent).
+  * Level: Computed at the subject-average level.
+- Area Under Curve (AUC):
+  * Definition: Calculated on a single-trial basis as the geometric area between the actual trajectory and the straight-line optimal path connecting start to touch.
+  * Meaning: Competitive attraction/curvature toward the unselected alternative target. In Incongruent trials, the prime pulls the hand toward the opposite target before online correction (Incongruent > Congruent).
+  * Level: Computed per single trial, then averaged per condition.
+- Maximum Absolute Deviation (MAD):
+  * Definition: Maximum perpendicular lateral deviation from the straight-line vector connecting start to touch.
+- Reaching Duration (mt):
+  * Definition: Flight time from movement initiation to screen touch.
+- Reaching Onset (react):
+  * Definition: Initiation latency from target display to movement lift-off.
+- Total Distance Traveled (tot_dist):
+  * Definition: Total 3D path length from start to touch.
+- Number of Changes of Mind (COM):
+  * Definition: Frequency of direction reversals/zero-crossings in lateral velocity.
+
+B. Continuous Trajectory Measures (Cluster-Based Permutation Tests):
+- Deviation From Center:
+  * Lateral deviation from midline across the reach path. Clusters of consecutive points showing significant congruency effects are identified via permutation testing.
+- Implied End Point (IEP):
+  * Extrapolated straight-line trajectory heading projected forward to the target plane.
+- Heading Angle:
+  * Angular direction of the instantaneous velocity vector.
+- Movement Variance (X-STD):
+  * Lateral spatial variability across trials within each condition.
+
+C. Discrete Keyboard Metrics:
+- Keyboard RT:
+  * Discrete choice reaction time (both raw in ms and within-participant z-scored).
+
+--------------------------------------------------------------------------------
+4. STATISTICAL METHODOLOGY & ROBUST METHODS
+--------------------------------------------------------------------------------
+- Paired Effect Size Scaling:
+  All effect sizes are calculated as paired Cohen's dz = mean(Diff) / SD(Diff) = t / sqrt(N).
+- Outliers & Robust Estimators:
+  For variables exhibiting distributional skewness or 1.5*IQR outliers (such as MAD and Reaching Onset), the pipeline computes Wilcox's Dependent AKP robust effect size (Algina, Keselman & Penfield, 2005; Mair & Wilcox, 2020 / WRS2 dep.effect) and Yuen's 20% trimmed paired t-tests.
+- Non-Parametric Permutations:
+  Exact two-tailed sign-flip permutation tests (10,000 iterations) are evaluated alongside parametric t-tests.
+- Effect Size Comparisons:
+  Bootstrap resampling (10,000 iterations) evaluates empirical 95% confidence intervals and permutation p-values for difference scores between effect sizes:
+  Delta_dz = dz(Measure A) - dz(Measure B).
+
+--------------------------------------------------------------------------------
+5. THE TreeBH MULTIPLE-COMPARISON FRAMEWORK: PROBLEM & ARCHITECTURE
+--------------------------------------------------------------------------------
+
+A. What is TreeBH?
+Tree-Structured Benjamini-Hochberg (TreeBH; Bogomolov et al., 2017; Yekutieli, 2008) is a hierarchical False Discovery Rate (FDR) controlling procedure. It controls the familywise error rate across levels while testing conditional hypotheses in a tree structure. Testing proceeds conditionally from parent to children: if a parent node is not rejected, its children cannot be declared significant.
+
+B. The Original Pre-Registration Tree:
+The pre-registered tree structure was designed as follows:
+- Root: "Effect Size comparison"
+  * Branch 1: "Reach"
+    - Sub-branch 1a: "Confirmatory"
+      * Leaf: "Reach area"
+    - Sub-branch 1b: "Exploratory"
+      * Leaves: "Reaction time", "Movement time", "COM", "Total distance traveled",
+        clusters of "Deviation from center", clusters of "Movement variation",
+        clusters of "Heading angle".
+  * Branch 2: "Keyboard"
+    - Leaf: "RT"
+
+C. Resolving the Ambiguity in the Pre-Registration Root ("Effect Size comparison"):
+- The root node in the pre-registration drawing is titled "Effect Size comparison".
+- However, the leaves are individual dependent variables ("Reach area", "Reaction time", "Movement time", "RT", etc.).
+- In null hypothesis testing, an individual variable tests whether that variable shows a significant congruency effect (H0: Congruent = Incongruent). An individual leaf CANNOT be a comparison between two effect sizes, because a comparison inherently requires a pair of measures (e.g. Delta_dz = dz_Reach - dz_Keyboard).
+- Furthermore, the pre-registration never defined a statistical test for comparing effect sizes (no formula, no test statistic, no bootstrap procedure for Delta_dz).
+- Therefore, the label "Effect Size comparison" at the root was a conceptual/overarching label representing the study's overall theme (comparing continuous reaching vs. keyboard priming), while the statistical tests assigned to the tree nodes are the congruency effect p-values for each individual metric.
+- Testing the congruency effects of each measure in the manuscript's TreeBH is mathematically sound and true to the leaf definitions.
+
+D. How Effect Size Comparisons and Preprocessing Flavors Actually Fit:
+1. Flavor Invariance Does NOT Belong Inside the Confirmatory Hypothesis Tree:
+   * In frequentist hypothesis testing, "flavor invariance" (checking whether results hold under noTrajNorm or z-scoring) is a sensitivity / robustness check, not a null hypothesis to be rejected with a p-value.
+   * The primary confirmatory tree should be evaluated on the pre-registered flavor: TrajNorm_noStandardization.
+   * The alternative flavors (noTrajNorm and TrajNorm_Standardization) serve as methodological robustness checks.
+
+2. Effect Size Comparisons (Delta_dz) Form a Separate, Distinct Testing Family:
+   * If effect size differences (e.g. testing whether Reaching Duration has a significantly larger dz than Keyboard RT) are to be formally controlled for multiple testing via TreeBH, they must form their own dedicated branch or tree where each leaf is an explicit pairwise comparison with its bootstrap permutation p-value:
+     - Delta_dz(Reaching Duration - Keyboard RT)
+     - Delta_dz(Reach Area - Keyboard RT)
+     - Delta_dz(MAD - Keyboard RT)
+     - Delta_dz(AUC - Keyboard RT)
+     - Delta_dz(Flight Duration - Initiation Latency)
+   * Keeping the Congruency Effect Tree (H0: Priming = 0) separate from the Relative Sensitivity Tree (H0: Delta_dz = 0) provides total mathematical clarity, protects pre-registered confirmatory power, and eliminates confusion between effect p-values and comparison p-values.
+
+--------------------------------------------------------------------------------
+6. CODEBASE STRUCTURE & RELEVANT SCRIPTS
+--------------------------------------------------------------------------------
+- Master Pipeline Runner: analysis/analysis_code/RUN_ME.m
+- Pipeline Functions:
+  * analysis/analysis_code/functions/analysis_pipeline.m (runs each flavor, extracts clusters, builds tables)
+  * analysis/analysis_code/functions/bootstrap_effect_sizes.m (computes individual dz and pairwise Delta_dz)
+  * analysis/analysis_code/functions/test_normality_and_permutations.m (normality, Yuen robust t, AKP_dep, permutations)
+  * analysis/analysis_code/functions/Calc_and_plot_TreeBH.m (Tree-BH tree generation and correction)
+- Output Files:
+  * Master Excel: analysis/statistics/All_Statistics.xlsx
+  * Master MAT File: analysis/statistics/All_Statistics.mat
+================================================================================

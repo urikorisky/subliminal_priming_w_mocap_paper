@@ -869,6 +869,15 @@ statsTables.good_subs = good_subs;
     % save([p.PROC_DATA_FOLDER '/com_p_val_' p.DAY '_' p.EXP '.mat'], 'p_val');
     currStatsTable = transferStatsToStatsTable(COM_Stats,currStatsTable);
 
+    % ------- Area Under Curve (AUC) -------
+    if isfield(reach_avg_each, 'auc') && isfield(reach_avg_each.auc, 'con')
+        auc_con = reach_avg_each.auc(iTraj).con(good_subs);
+        auc_incon = reach_avg_each.auc(iTraj).incon(good_subs);
+        [~, p_auc, ci_auc, stats_auc] = ttest(auc_con, auc_incon);
+        AUC_Stats = printStats('Area Under Curve (AUC)', auc_con, auc_incon, ["Con","Incon"], p_auc, ci_auc, stats_auc);
+        currStatsTable = transferStatsToStatsTable(AUC_Stats, currStatsTable);
+    end
+
     subplots = fig_3_ah_handle.Children;
     % Iterate over figures.
     for iFigure = 1:length(subplots)
@@ -888,73 +897,156 @@ statsTables.good_subs = good_subs;
         end
     end
 
-    %% - Fig. 4 + Supp. Fig. 4
+    %% - Fig. 4 + Supp. Fig. 4 (Full-Trajectory Permutation Testing)
     good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
 
+    plt_p.errbar_type = 'ci';
+
+    fig4Handle = figure('Name',sprintf('Figure 4 - %s', roundName), 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,1400,450]);
+
+    fullTraj_Stats = struct('name',[],...
+        'cluster',[],...
+        'start_time',[],...
+        'end_time',[],...
+        'cluster_size',[],...
+        'p_val',[],...
+        'cohens_dz',[],...
+        'tStar',[]);
+    fullTraj_Stats_Table = struct2table(fullTraj_Stats);
+    fullTraj_Stats_Table.Properties.VariableNames{end} = 't*';
+
+    % ------- Avg traj with shade -------
+    figure(fig4Handle);
+    subplot(1,3,1);
+    fprintf('Average trajectory permutation (%s):\n', roundName);
+    AVG_Trajectory_Clusters_Stats = plotMultiAvgTrajWithShade(traj_names, plt_p, p, true);
+    fullTraj_Stats_Table = transferStatsToStatsTable(AVG_Trajectory_Clusters_Stats, fullTraj_Stats_Table);
+
+    % ------- Implied Endpoint -------
+    figure(fig4Handle);
+    subplot_p = [0,0,0; 1,3,2];
+    fprintf('Implied endpoint permutation (%s):\n', roundName);
+    IEP_Clusters_Stats = plotMultiIEP(traj_names, subplot_p, 0, plt_p, p);
+    fullTraj_Stats_Table = transferStatsToStatsTable(IEP_Clusters_Stats, fullTraj_Stats_Table);
+
+    % ------- Heading angle -------
+    figure(fig4Handle);
+    subplot(1,3,3);
+    fprintf('Heading angle permutation (%s):\n', roundName);
+    HeadingAngle_Clusters_Stats = plotMultiHeadAngle(traj_names, plt_p, p, 'xangle');
+    fullTraj_Stats_Table = transferStatsToStatsTable(HeadingAngle_Clusters_Stats, fullTraj_Stats_Table);
+    figure(fig4Handle);
+    tightfig();
+    p.figureHandles.(roundName).fig4 = fig4Handle;
+
+    %% Supp. Fig. 4
+    suppFig4Handle = figure('Name',sprintf('Supplementary Figure 4 - %s', roundName), 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,500,450]);
+
+    % ------- X STD -------
+    figure(suppFig4Handle);
+    fprintf('Movement variance along X-axis permutation (%s):\n', roundName);
+    Xaxis_STD_Clusters_Stats = plotMultiXStd(traj_names, plt_p, p);
+    fullTraj_Stats_Table = transferStatsToStatsTable(Xaxis_STD_Clusters_Stats, fullTraj_Stats_Table);
+
+    figure(suppFig4Handle);
+    tightfig();
+    p.figureHandles.(roundName).suppfig4 = suppFig4Handle;
+
+    % --------- Velocity Profile (only when unnormalized in time) ---------
     if ~p.NORM_TRAJ
-        
-        plt_p.errbar_type = 'ci';
-
-        fig4Handle = figure('Name','Figure 4', 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,1400,450]);
-
-        fullTraj_Stats = struct('name',[],...
-            'cluster',[],...
-            'start_time',[],...
-            'end_time',[],...
-            'cluster_size',[],...
-            'p_val',[],...
-            'cohens_dz',[],...
-            'tStar',[]);
-        fullTraj_Stats_Table = struct2table(fullTraj_Stats);
-        fullTraj_Stats_Table.Properties.VariableNames{end} = 't*';
-
-        % ------- Avg traj with shade -------
-        figure(fig4Handle);
-        subplot(1,3,1);
-        disp('Average trajectory permutation:');
-        AVG_Trajectory_Clusters_Stats = plotMultiAvgTrajWithShade(traj_names, plt_p, p,true);
-        fullTraj_Stats_Table = transferStatsToStatsTable(AVG_Trajectory_Clusters_Stats,fullTraj_Stats_Table);
-    
-        % ------- Implied Endpoint -------
-        figure(fig4Handle);
-        subplot_p = [0,0,0;1,3,2];
-        disp('Implied endpoint permutation:');
-        IEP_Clusters_Stats = plotMultiIEP(traj_names, subplot_p, 0, plt_p, p);
-        fullTraj_Stats_Table = transferStatsToStatsTable(IEP_Clusters_Stats,fullTraj_Stats_Table);
-    
-        % ------- Heading angle -------
-        figure(fig4Handle);
-        subplot(1,3,3);
-        % Select either "xtime" or "xangle"
-        disp('Heading angle permutation:');
-        HeadingAngle_Clusters_Stats = plotMultiHeadAngle(traj_names, plt_p, p,'xangle');
-        fullTraj_Stats_Table = transferStatsToStatsTable(HeadingAngle_Clusters_Stats,fullTraj_Stats_Table);
-        figure(fig4Handle);
-        tightfig();
-        p.figureHandles.(roundName).fig4 = fig4Handle;
-        %% Supp. Fig. 4
-        good_subs = load([p.PROC_DATA_FOLDER '/good_subs_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  good_subs = good_subs.good_subs;
-    
-        suppFig4Handle = figure('Name','Supplementary Figure 4', 'WindowState','maximized', 'MenuBar','figure','Position',[80,340,500,450]);
-    
-        % ------- X STD -------
-        figure(suppFig4Handle);
-        disp('Movement variance along X-axis permutation:');
-        Xaxis_STD_Clusters_Stats = plotMultiXStd(traj_names, plt_p, p);
-        fullTraj_Stats_Table = transferStatsToStatsTable(Xaxis_STD_Clusters_Stats,fullTraj_Stats_Table);
-    
-        figure(suppFig4Handle);
-        tightfig();
-        p.figureHandles.(roundName).suppfig4 = suppFig4Handle;
-
-        % --------- Velocity Profile ---------
         figure(); % Temporary separate figure
         VelAcc_Clusters_Stats = plotMultiVelAcc('vel', traj_names, subplot_p, 0, plt_p, p);
-        fullTraj_Stats_Table = transferStatsToStatsTable(VelAcc_Clusters_Stats,fullTraj_Stats_Table);
+        fullTraj_Stats_Table = transferStatsToStatsTable(VelAcc_Clusters_Stats, fullTraj_Stats_Table);
+    end
 
-        statsTables.fullTrajAnalysis = fullTraj_Stats_Table;
+    % Add Flavor column to fullTraj_Stats_Table
+    if ~isempty(fullTraj_Stats_Table)
+        fullTraj_Stats_Table = addvars(fullTraj_Stats_Table, repmat(string(roundName), height(fullTraj_Stats_Table), 1), ...
+            'Before', 1, 'NewVariableNames', 'Flavor');
+    end
+
+    % --- Dynamically extract cluster windows and add summaries to currStatsTable ---
+    dynamic_windows = struct();
+    for iRow = 1:height(fullTraj_Stats_Table)
+        meas_name = fullTraj_Stats_Table.name(iRow);
+        st = fullTraj_Stats_Table.start_time(iRow);
+        en = fullTraj_Stats_Table.end_time(iRow);
+        
+        data_con = [];
+        data_incon = [];
+        field_key = '';
+        clean_base_name = '';
+        
+        if contains(meas_name, "Deviation From center", 'IgnoreCase', true)
+            data_con = reach_avg_each.traj(iTraj).con(:, good_subs, 1);
+            data_incon = reach_avg_each.traj(iTraj).incon(:, good_subs, 1);
+            field_key = 'traj';
+            clean_base_name = 'Deviation From Center';
+        elseif contains(meas_name, "iEP", 'IgnoreCase', true)
+            data_con = reach_avg_each.iep(iTraj).con(:, good_subs);
+            data_incon = reach_avg_each.iep(iTraj).incon(:, good_subs);
+            field_key = 'iep';
+            clean_base_name = 'Implied End Point (IEP)';
+        elseif contains(meas_name, "Heading angle", 'IgnoreCase', true)
+            data_con = reach_avg_each.head_angle(iTraj).con(:, good_subs);
+            data_incon = reach_avg_each.head_angle(iTraj).incon(:, good_subs);
+            field_key = 'head_angle';
+            clean_base_name = 'Heading Angle';
+        elseif contains(meas_name, "Movement variation", 'IgnoreCase', true) || contains(meas_name, "X-axis", 'IgnoreCase', true)
+            data_con = reach_avg_each.x_std(iTraj).con(:, good_subs);
+            data_incon = reach_avg_each.x_std(iTraj).incon(:, good_subs);
+            field_key = 'x_std';
+            clean_base_name = 'Movement Variance (X-STD)';
+        elseif contains(meas_name, "vel", 'IgnoreCase', true)
+            if isfield(reach_avg_each, 'vel')
+                data_con = reach_avg_each.vel(iTraj).con(:, good_subs);
+                data_incon = reach_avg_each.vel(iTraj).incon(:, good_subs);
+                field_key = 'vel';
+                clean_base_name = 'Velocity';
+            end
+        end
+        
+        if ~isempty(field_key)
+            if ~isfield(dynamic_windows, field_key)
+                dynamic_windows.(field_key) = [st, en];
+            end
+            
+            % Check if multiple clusters exist for this measure in this flavor
+            is_multi = sum(fullTraj_Stats_Table.name == meas_name) > 1;
+            cluster_suffix = '';
+            if is_multi
+                cluster_suffix = sprintf(' (Cluster %d)', fullTraj_Stats_Table.cluster(iRow));
+            end
+            
+            % Generate descriptive title:
+            if ~p.NORM_TRAJ
+                % Unnormalized: time samples at 100 Hz (10 ms per sample)
+                ms_start = round(st * 10);
+                ms_end   = round(en * 10);
+                title_str = sprintf('%s%s [%d-%d samples, %d-%d ms]', clean_base_name, cluster_suffix, st, en, ms_start, ms_end);
+            else
+                % Normalized: 200 points (0.5% path per point)
+                pct_start = st / 2;
+                pct_end   = en / 2;
+                title_str = sprintf('%s%s [%d-%d points, %.1f-%.1f%% path]', clean_base_name, cluster_suffix, st, en, pct_start, pct_end);
+            end
+            
+            % Compute subject-level window averages and paired t-test
+            sub_con = mean(data_con(st:en, :), 1);
+            sub_incon = mean(data_incon(st:en, :), 1);
+            [~, p_win, ci_win, stats_win] = ttest(sub_con, sub_incon);
+            win_stats = printStats(title_str, sub_con, sub_incon, ["Con","Incon"], p_win, ci_win, stats_win);
+            currStatsTable = transferStatsToStatsTable(win_stats, currStatsTable);
+        end
     end
 
     figureHandles = p.figureHandles;
     statsTables.(roundName) = currStatsTable;
+    statsTables.dynamic_trajectory_windows.(roundName) = dynamic_windows;
+    
+    if isfield(statsTables, 'fullTrajAnalysis') && istable(statsTables.fullTrajAnalysis)
+        statsTables.fullTrajAnalysis = [statsTables.fullTrajAnalysis; fullTraj_Stats_Table];
+    else
+        statsTables.fullTrajAnalysis = fullTraj_Stats_Table;
+    end
 end

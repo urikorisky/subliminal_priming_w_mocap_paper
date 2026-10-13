@@ -47,12 +47,11 @@ function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
         stdshade(avg_each.traj(iTraj).incon_left(:,good_subs,1)', plt_p.f_alpha*0.9, plt_p.incon_col, left_axis, 0, 0, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
         stdshade(avg_each.traj(iTraj).incon_right(:,good_subs,1)', plt_p.f_alpha*0.9, plt_p.incon_col, left_axis, 0, 0, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
         
-        % In the paper we talk about the onset/offset of the effect only when examining the trajs as a func of time.
-        if ~p.NORM_TRAJ
-            % Permutation testing.
-            clusters = permCluster(avg_each.traj.con(:,good_subs,1), avg_each.traj.incon(:,good_subs,1), plt_p.n_perm, plt_p.n_perm_clust_tests);
-    
-            % Plot clusters.
+        % Permutation testing across trajectory
+        clusters = permCluster(avg_each.traj.con(:,good_subs,1), avg_each.traj.incon(:,good_subs,1), plt_p.n_perm, plt_p.n_perm_clust_tests);
+
+        % Plot clusters.
+        if ~isempty(clusters)
             points = [left_axis(clusters.start)'; left_axis(clusters.end)'];
             if ~isempty(points)
                 drawRectangle(points, 'y', xlimit, plt_p);
@@ -82,7 +81,7 @@ function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
         legend(h, graphs, 'Location','southeast');
         legend('boxoff');
 
-        if ~p.NORM_TRAJ
+        if ~isempty(clusters)
             % Print stats to terminal.
             outStats = printTsStats('Deviation From center', clusters);
         end

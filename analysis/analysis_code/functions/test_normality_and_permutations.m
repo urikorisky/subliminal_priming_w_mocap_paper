@@ -1,12 +1,20 @@
-function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(rawAggData, good_subs)
+function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(rawAggData, good_subs, trajectory_windows)
 % TEST_NORMALITY_AND_PERMUTATIONS
 % Evaluates normality, 1.5*IQR outliers, Yuen's robust t-test / AKP effect size,
-% and paired sign-flip permutation tests for all discrete DVs across all flavors.
+% and paired sign-flip permutation tests for all discrete DVs and windowed trajectory
+% clusters across all flavors.
 % Strictly includes only participants in good_subs.
 
+    if nargin < 3
+        trajectory_windows = struct();
+    end
+
     flavors = fieldnames(rawAggData);
-    dv_names = {'kb_rt', 'ra', 'tot_dist', 'auc', 'mad', 'react', 'mt', 'com', 'rt'};
-    dv_labels = {'Keyboard RT', 'Reach Area', 'Total Distance', 'AUC', 'MAD', 'Reach Onset', 'Movement Duration', 'Changes of Mind', 'Reach RT'};
+    dv_names = {'kb_rt', 'ra', 'tot_dist', 'auc', 'mad', 'react', 'mt', 'com'};
+    dv_labels = {'Keyboard RT', 'Reach Area', 'Total Distance Traveled', 'Area Under Curve (AUC)', 'Maximum Absolute Deviation (MAD)', 'Reaching Onset', 'Reaching Duration', 'Num of COM'};
+
+    traj_names = {'traj', 'iep', 'head_angle', 'x_std', 'vel'};
+    traj_base_labels = {'Deviation From Center', 'Implied End Point (IEP)', 'Heading Angle', 'Movement Variance (X-STD)', 'Velocity'};
 
     all_rows = {};
     norm_perm_struct = struct();
@@ -21,9 +29,34 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
         flav_data = rawAggData.(flav);
         norm_perm_struct.(flav) = struct();
 
-        for iDV = 1:length(dv_names)
-            dv = dv_names{iDV};
-            label = dv_labels{iDV};
+        % 1. Discrete DVs
+        curr_dvs = dv_names;
+        curr_labels = dv_labels;
+
+        % 2. Add windowed trajectory DVs if clusters exist for this flavor
+        for iTr = 1:length(traj_names)
+            tr_f = traj_names{iTr};
+            tr_base = traj_base_labels{iTr};
+            win = [];
+            if isfield(trajectory_windows, flav) && isfield(trajectory_windows.(flav), tr_f)
+                win = trajectory_windows.(flav).(tr_f);
+            elseif isfield(trajectory_windows, tr_f)
+                win = trajectory_windows.(tr_f);
+            end
+            
+            if ~isempty(win)
+                curr_dvs{end+1} = tr_f;
+                if contains(flav, 'noTrajNorm')
+                    curr_labels{end+1} = sprintf('%s [%d-%d samples, %d-%d ms]', tr_base, win(1), win(2), win(1)*10, win(2)*10);
+                else
+                    curr_labels{end+1} = sprintf('%s [%d-%d points, %.1f-%.1f%% path]', tr_base, win(1), win(2), win(1)/2, win(2)/2);
+                end
+            end
+        end
+
+        for iDV = 1:length(curr_dvs)
+            dv = curr_dvs{iDV};
+            label = curr_labels{iDV};
 
             % Extract con and incon for good_subs
             con_vec = [];
@@ -37,6 +70,19 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
                         con_vec = con_vec * 1000;
                         incon_vec = incon_vec * 1000;
                     end
+                end
+            elseif ismember(dv, traj_names)
+                win = [];
+                if isfield(trajectory_windows, flav) && isfield(trajectory_windows.(flav), dv)
+                    win = trajectory_windows.(flav).(dv);
+                elseif isfield(trajectory_windows, dv)
+                    win = trajectory_windows.(dv);
+                end
+                if ~isempty(win) && isfield(flav_data, 'reach') && isfield(flav_data.reach, dv)
+                    c_mat = flav_data.reach.(dv).con(:, good_subs, 1);
+                    inc_mat = flav_data.reach.(dv).incon(:, good_subs, 1);
+                    con_vec = mean(c_mat(win(1):win(2), :), 1);
+                    incon_vec = mean(inc_mat(win(1):win(2), :), 1);
                 end
             else
                 if isfield(flav_data, 'reach') && isfield(flav_data.reach, dv)
