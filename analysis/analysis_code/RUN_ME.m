@@ -71,9 +71,6 @@ final_fig_handles = analysisPrms.figureHandles;
 full_stats_tables = analysisPrms.statsTables;
 full_stats_tables.analyzed_stats_tables = extract_relevant_statistics(full_stats_tables,'statistics_print_config.csv');
 
-%% Tree-BH FDR correction:
-[full_stats_tables, final_fig_handles.TreeBH] = Calc_and_plot_TreeBH(full_stats_tables);
-
 %% Effect sizes comparisons
 
 % 1. Fields to analyze
@@ -118,9 +115,13 @@ full_stats_tables.Effect_Comparisons_Cross = cross_tbl;
 full_stats_tables.Normality_and_Permutations = norm_perm_struct;
 full_stats_tables.Normality_and_Permutations_Table = norm_perm_table;
 
+%% 6. Tree-BH FDR Correction Architecture & Chronological Trajectory Dynamics
+treebh_fig_dir = fullfile(analysisPrms.targetFigs_allAnalysesCombined, 'TreeBH');
+[full_stats_tables, final_fig_handles.TreeBH] = run_treebh_suite(full_stats_tables, within_tbl, treebh_fig_dir);
+
 %% Plot effect sizes & QQ plots
 plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl);
 plot_and_save_qq_plots(full_stats_tables.rawAggData, good_subs, analysisPrms.targetFigs_allAnalysesCombined);
 
-%% Save all outcomes (figures, All_Statistics.mat, All_Statistics.xlsx):
+%% Save all outcomes (figures, All_Statistics.mat, All_Statistics.xlsx, Master_TreeBH_and_Stats_Results.mat):
 printAndSave(final_fig_handles, full_stats_tables, analysisPrms);

@@ -1,8 +1,26 @@
 function [] = printAndSave(final_fig_handles, full_stats_tables, analysisParameters)
 %PRINTANDSAVE Saves all the figures and statistics produced in the analysis
 
-    baseFigsFldr = analysisParameters.targetFigs_allAnalysesCombined;
+    if nargin == 2
+        analysisParameters = full_stats_tables;
+        full_stats_tables = final_fig_handles;
+        final_fig_handles = struct();
+    elseif nargin < 2
+        error('printAndSave requires at least full_stats_tables and analysisParameters');
+    end
+
+    if ~isfield(analysisParameters, 'targetFigs_allAnalysesCombined')
+        baseFigsFldr = '../figures';
+    else
+        baseFigsFldr = analysisParameters.targetFigs_allAnalysesCombined;
+    end
     if ~exist(baseFigsFldr, 'dir'), mkdir(baseFigsFldr); end
+
+    if ~isfield(analysisParameters, 'targetStats_allAnalysesCombined')
+        statsFldr = '../statistics';
+    else
+        statsFldr = analysisParameters.targetStats_allAnalysesCombined;
+    end
 
     % Save all figures by category / flavor:
     figFields = fields(final_fig_handles)';
@@ -30,9 +48,12 @@ function [] = printAndSave(final_fig_handles, full_stats_tables, analysisParamet
     end
 
     % Save all the statistics in one MAT file:
-    statsFldr = analysisParameters.targetStats_allAnalysesCombined;
     if ~exist(statsFldr, 'dir'), mkdir(statsFldr); end
     save(fullfile(statsFldr, 'All_Statistics.mat'), 'full_stats_tables');
+    if isfield(full_stats_tables, 'TreeBH_Results')
+        TreeBH_Results = full_stats_tables.TreeBH_Results;
+        save(fullfile(statsFldr, 'Master_TreeBH_and_Stats_Results.mat'), 'TreeBH_Results');
+    end
     
     % Print all the relevant statistics into one workbook:
     xlsxFile = fullfile(statsFldr, 'All_Statistics.xlsx');
@@ -69,8 +90,13 @@ end
 
 function writeAllStatsWorkbook(xlsxFile, full_stats_tables, analysisParameters)
     % 1. Individual Flavor Statistics Sheets
-    for iR = 1:numel(analysisParameters.analysisRounds)
-        rName = matlab.lang.makeValidName(analysisParameters.analysisRounds{iR});
+    if isfield(analysisParameters, 'analysisRounds')
+        rounds = analysisParameters.analysisRounds;
+    else
+        rounds = {'noTrajNorm_noStandardization', 'TrajNorm_noStandardization', 'TrajNorm_Standardization'};
+    end
+    for iR = 1:numel(rounds)
+        rName = matlab.lang.makeValidName(rounds{iR});
         if isfield(full_stats_tables, rName) && istable(full_stats_tables.(rName))
             writetable(full_stats_tables.(rName), xlsxFile, 'Sheet', rName);
         end
@@ -123,5 +149,31 @@ function writeAllStatsWorkbook(xlsxFile, full_stats_tables, analysisParameters)
     
     if isfield(full_stats_tables, 'Prime_Performance_Stats') && istable(full_stats_tables.Prime_Performance_Stats)
         writetable(full_stats_tables.Prime_Performance_Stats, xlsxFile, 'Sheet', 'Prime_Obj_Aware');
+    end
+    
+    % 7. TreeBH Architecture Sheets
+    if isfield(full_stats_tables, 'TreeBH_Results') && isstruct(full_stats_tables.TreeBH_Results)
+        tb = full_stats_tables.TreeBH_Results;
+        if isfield(tb, 'Tree1_Main_Table') && istable(tb.Tree1_Main_Table)
+            writetable(tb.Tree1_Main_Table, xlsxFile, 'Sheet', 'Tree1_Congruency_Flavor1');
+        end
+        if isfield(tb, 'TreeS1_PreReg_Table') && istable(tb.TreeS1_PreReg_Table)
+            writetable(tb.TreeS1_PreReg_Table, xlsxFile, 'Sheet', 'TreeS1_PreReg_Original');
+        end
+        if isfield(tb, 'TreeS2_Standard_Table') && istable(tb.TreeS2_Standard_Table)
+            writetable(tb.TreeS2_Standard_Table, xlsxFile, 'Sheet', 'TreeS2_Standardized');
+        end
+        if isfield(tb, 'Tree2_Sensitivity_Table') && istable(tb.Tree2_Sensitivity_Table)
+            writetable(tb.Tree2_Sensitivity_Table, xlsxFile, 'Sheet', 'Tree2_Relative_Sensitivity');
+        end
+        if isfield(tb, 'TreeSI2_Sensitivity_Standard_Table') && istable(tb.TreeSI2_Sensitivity_Standard_Table)
+            writetable(tb.TreeSI2_Sensitivity_Standard_Table, xlsxFile, 'Sheet', 'TreeSI2_Sensitivity_Standard');
+        end
+        if isfield(tb, 'Component4_Continuous_FDR') && istable(tb.Component4_Continuous_FDR)
+            writetable(tb.Component4_Continuous_FDR, xlsxFile, 'Sheet', 'Chrono_Traj_Clusters');
+        end
+        if isfield(tb, 'Component6_Sensitivity_Contrasts') && istable(tb.Component6_Sensitivity_Contrasts)
+            writetable(tb.Component6_Sensitivity_Contrasts, xlsxFile, 'Sheet', 'Chrono_Sensitivity_Contrasts');
+        end
     end
 end
