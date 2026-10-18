@@ -176,4 +176,9 @@ function writeAllStatsWorkbook(xlsxFile, full_stats_tables, analysisParameters)
             writetable(tb.Component6_Sensitivity_Contrasts, xlsxFile, 'Sheet', 'Chrono_Sensitivity_Contrasts');
         end
     end
+
+    % 8. Split-Half Reliability (Spearman-Brown, 5,000 Splits)
+    if isfield(full_stats_tables, 'Split_Half_Reliability') && istable(full_stats_tables.Split_Half_Reliability)
+        writetable(full_stats_tables.Split_Half_Reliability, xlsxFile, 'Sheet', 'Split_Half_Reliability');
+    end
 end

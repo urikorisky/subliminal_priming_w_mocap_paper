@@ -119,6 +119,17 @@ full_stats_tables.Normality_and_Permutations_Table = norm_perm_table;
 treebh_fig_dir = fullfile(analysisPrms.targetFigs_allAnalysesCombined, 'TreeBH');
 [full_stats_tables, final_fig_handles.TreeBH] = run_treebh_suite(full_stats_tables, within_tbl, treebh_fig_dir);
 
+%% 7. Spearman-Brown Split-Half Reliability (5,000 Random Splits)
+if analysisPrms.fromRawData
+    rel_data_folder = analysisPrms.targetPreProcData_TrajNorm_noStandardization_folder;
+else
+    rel_data_folder = analysisPrms.readyPreProcData_TrajNorm_noStandardization_folder;
+end
+[Reliability_Results, Reliability_Table] = calc_split_half_reliability(rel_data_folder, good_subs, 5000);
+full_stats_tables.Split_Half_Reliability_Results = Reliability_Results;
+full_stats_tables.Split_Half_Reliability = Reliability_Table;
+final_fig_handles.Fig_Split_Half_Reliability = plot_reliability_forest(Reliability_Table, analysisPrms.targetFigs_allAnalysesCombined);
+
 %% Plot effect sizes & QQ plots
 plot_and_save_effect_sizes(effects_tbl, within_tbl, cross_tbl);
 plot_and_save_qq_plots(full_stats_tables.rawAggData, good_subs, analysisPrms.targetFigs_allAnalysesCombined);
