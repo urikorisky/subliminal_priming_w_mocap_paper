@@ -62,7 +62,7 @@ function final_table = extract_relevant_statistics(full_stats_tables, config_fil
             continue;
         end
         
-        % Extract the base row (keeps all original columns like con_avg, incon_avg)
+        % Extract the base row (keeps all original columns like con_avg, incon_avg, total_avg, total_std)
         row_table = desc_table(idx_desc, :);
         
         
@@ -111,6 +111,7 @@ function final_table = extract_relevant_statistics(full_stats_tables, config_fil
         desired_order = {'name', 'Descriptive_Type', 'Comparative_Type', ...
                          'Trajectory_Normalized', 'Within_Participant_Standardization', ...
                          'con_avg', 'con_std', 'incon_avg', 'incon_std', ...
+                         'total_avg', 'total_std', ...
                          'diff_avg', 'tVal', 'pVal', 'cohens_d_z'};
                      
         existing_cols = intersect(desired_order, final_table.Properties.VariableNames, 'stable');

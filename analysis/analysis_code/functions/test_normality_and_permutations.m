@@ -1,20 +1,19 @@
 function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(rawAggData, good_subs, trajectory_windows)
 % TEST_NORMALITY_AND_PERMUTATIONS
 % Evaluates normality, 1.5*IQR outliers, Yuen's robust t-test / AKP effect size,
-% and paired sign-flip permutation tests for all discrete DVs and windowed trajectory
-% clusters across all flavors.
-% Strictly includes only participants in good_subs.
+% and paired sign-flip permutation tests strictly for the valid metrics of each flavor:
+%   - noTrajNorm_noStandardization: ONLY valid windowed trajectory clusters (traj, iep, head_angle, x_std)
+%   - TrajNorm_noStandardization: 8 discrete DVs + 3 valid windowed trajectory clusters (traj, iep, x_std)
+%   - TrajNorm_Standardization: ONLY 8 standardized discrete DVs
 
     if nargin < 3
         trajectory_windows = struct();
     end
 
     flavors = fieldnames(rawAggData);
-    dv_names = {'kb_rt', 'ra', 'tot_dist', 'auc', 'mad', 'react', 'mt', 'com'};
-    dv_labels = {'Keyboard RT', 'Reach Area', 'Total Distance Traveled', 'Area Under Curve (AUC)', 'Maximum Absolute Deviation (MAD)', 'Reaching Onset', 'Reaching Duration', 'Num of COM'};
-
-    traj_names = {'traj', 'iep', 'head_angle', 'x_std', 'vel'};
-    traj_base_labels = {'Deviation From Center', 'Implied End Point (IEP)', 'Heading Angle', 'Movement Variance (X-STD)', 'Velocity'};
+    dv_names  = {'kb_rt', 'ra', 'tot_dist', 'auc', 'mad', 'react', 'mt', 'com'};
+    dv_labels = {'Keyboard RT', 'Reach Area', 'Total Distance Traveled', 'Area Under Curve (AUC)', ...
+                 'Maximum Absolute Deviation (MAD)', 'Reaching Onset', 'Reaching Duration', 'Num of COM'};
 
     all_rows = {};
     norm_perm_struct = struct();
@@ -29,27 +28,40 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
         flav_data = rawAggData.(flav);
         norm_perm_struct.(flav) = struct();
 
-        % 1. Discrete DVs
-        curr_dvs = dv_names;
-        curr_labels = dv_labels;
+        % Strictly scope DVs and trajectory features by flavor
+        if strcmp(flav, 'noTrajNorm_noStandardization')
+            curr_dvs        = {};
+            curr_labels     = {};
+            valid_traj_code = {'traj', 'iep', 'head_angle', 'x_std'};
+            valid_traj_lbl  = {'Deviation From Center', 'Implied End Point (IEP)', 'Heading Angle', 'Movement Variance (X-STD)'};
+        elseif strcmp(flav, 'TrajNorm_noStandardization')
+            curr_dvs        = dv_names;
+            curr_labels     = dv_labels;
+            valid_traj_code = {'traj', 'iep', 'x_std'};
+            valid_traj_lbl  = {'Deviation From Center', 'Implied End Point (IEP)', 'Movement Variance (X-STD)'};
+        else
+            % TrajNorm_Standardization: discrete variables only (continuous trajectories identical to TrajNorm_noStd)
+            curr_dvs        = dv_names;
+            curr_labels     = dv_labels;
+            valid_traj_code = {};
+            valid_traj_lbl  = {};
+        end
 
-        % 2. Add windowed trajectory DVs if clusters exist for this flavor
-        for iTr = 1:length(traj_names)
-            tr_f = traj_names{iTr};
-            tr_base = traj_base_labels{iTr};
+        % Append valid windowed trajectory DVs if clusters exist for this flavor
+        for iTr = 1:length(valid_traj_code)
+            tr_f    = valid_traj_code{iTr};
+            tr_base = valid_traj_lbl{iTr};
             win = [];
             if isfield(trajectory_windows, flav) && isfield(trajectory_windows.(flav), tr_f)
                 win = trajectory_windows.(flav).(tr_f);
-            elseif isfield(trajectory_windows, tr_f)
-                win = trajectory_windows.(tr_f);
             end
-            
+
             if ~isempty(win)
-                curr_dvs{end+1} = tr_f;
+                curr_dvs{end+1} = tr_f; %#ok<AGROW>
                 if contains(flav, 'noTrajNorm')
-                    curr_labels{end+1} = sprintf('%s [%d-%d samples, %d-%d ms]', tr_base, win(1), win(2), win(1)*10, win(2)*10);
+                    curr_labels{end+1} = sprintf('%s [%d-%d samples, %d-%d ms]', tr_base, win(1), win(2), win(1)*10, win(2)*10); %#ok<AGROW>
                 else
-                    curr_labels{end+1} = sprintf('%s [%d-%d points, %.1f-%.1f%% path]', tr_base, win(1), win(2), win(1)/2, win(2)/2);
+                    curr_labels{end+1} = sprintf('%s [%d-%d points, %.1f-%.1f%% path]', tr_base, win(1), win(2), win(1)/2, win(2)/2); %#ok<AGROW>
                 end
             end
         end
@@ -58,45 +70,29 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
             dv = curr_dvs{iDV};
             label = curr_labels{iDV};
 
-            % Extract con and incon for good_subs
-            con_vec = [];
+            con_vec   = [];
             incon_vec = [];
 
             if strcmp(dv, 'kb_rt')
                 if isfield(flav_data, 'keyboard') && isfield(flav_data.keyboard, 'rt')
-                    con_vec = flav_data.keyboard.rt.con(good_subs);
+                    con_vec   = flav_data.keyboard.rt.con(good_subs);
                     incon_vec = flav_data.keyboard.rt.incon(good_subs);
-                    if ~contains(flav, 'Standardization') && mean(con_vec, 'omitnan') < 10
-                        con_vec = con_vec * 1000;
-                        incon_vec = incon_vec * 1000;
-                    end
                 end
-            elseif ismember(dv, traj_names)
-                win = [];
-                if isfield(trajectory_windows, flav) && isfield(trajectory_windows.(flav), dv)
-                    win = trajectory_windows.(flav).(dv);
-                elseif isfield(trajectory_windows, dv)
-                    win = trajectory_windows.(dv);
-                end
+            elseif ismember(dv, {'traj', 'iep', 'head_angle', 'x_std'})
+                win = trajectory_windows.(flav).(dv);
                 if ~isempty(win) && isfield(flav_data, 'reach') && isfield(flav_data.reach, dv)
-                    c_mat = flav_data.reach.(dv).con(:, good_subs, 1);
+                    c_mat   = flav_data.reach.(dv).con(:, good_subs, 1);
                     inc_mat = flav_data.reach.(dv).incon(:, good_subs, 1);
-                    con_vec = mean(c_mat(win(1):win(2), :), 1);
+                    con_vec   = mean(c_mat(win(1):win(2), :), 1);
                     incon_vec = mean(inc_mat(win(1):win(2), :), 1);
                 end
             else
                 if isfield(flav_data, 'reach') && isfield(flav_data.reach, dv)
-                    con_vec = flav_data.reach.(dv).con(good_subs);
+                    con_vec   = flav_data.reach.(dv).con(good_subs);
                     incon_vec = flav_data.reach.(dv).incon(good_subs);
                     if size(con_vec, 1) > 1
-                        con_vec = con_vec(1, :);
+                        con_vec   = con_vec(1, :);
                         incon_vec = incon_vec(1, :);
-                    end
-                    if strcmp(dv, 'ra') && ~contains(flav, 'Standardization') && ~contains(flav, 'TrajNorm')
-                        if mean(con_vec, 'omitnan') < 0.5
-                            con_vec = con_vec * 10000;
-                            incon_vec = incon_vec * 10000;
-                        end
                     end
                 end
             end
@@ -105,7 +101,6 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
                 continue;
             end
 
-            % Clean paired vectors
             valid_idx = ~isnan(con_vec) & ~isnan(incon_vec);
             x = con_vec(valid_idx);
             y = incon_vec(valid_idx);
@@ -118,10 +113,10 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
 
             % --- 1. Parametric Statistics ---
             mean_diff = mean(diff_vec);
-            sd_diff = std(diff_vec);
+            sd_diff   = std(diff_vec);
             [~, p_param, ci_param, stats_param] = ttest(y, x);
-            t_stat = stats_param.tstat;
-            df_param = stats_param.df;
+            t_stat    = stats_param.tstat;
+            df_param  = stats_param.df;
             cohens_dz = t_stat / sqrt(n);
 
             % --- 2. Normality Testing ---
@@ -133,25 +128,22 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
 
             skew_val = skewness(diff_vec);
             kurt_val = kurtosis(diff_vec);
-
-            % Overall normality flag: Normal if Lilliefors p >= 0.05 and JB p >= 0.05
             is_normal = is_normal_lillie && is_normal_jb;
 
             % --- 3. Outlier Detection (1.5 * IQR) ---
             q1 = prctile(diff_vec, 25);
             q3 = prctile(diff_vec, 75);
             iqr_val = q3 - q1;
-            lower_fence = q1 - 1.5 * iqr_val;
-            upper_fence = q3 + 1.5 * iqr_val;
+            lower_fence  = q1 - 1.5 * iqr_val;
+            upper_fence  = q3 + 1.5 * iqr_val;
             outlier_mask = (diff_vec < lower_fence) | (diff_vec > upper_fence);
-            n_outliers = sum(outlier_mask);
+            n_outliers   = sum(outlier_mask);
             has_outliers = (n_outliers > 0);
 
             % --- 4. Yuen's Robust Paired Test & AKP Effect Size ---
             g = floor(tr * n);
             h = n - 2 * g;
 
-            % Winsorize x and y while strictly preserving participant pairing
             sort_x = sort(x);
             xbot = sort_x(g + 1);
             xtop = sort_x(end - g);
@@ -175,19 +167,18 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
             mean_x_tr = trimmean(x, 2 * tr * 100);
             mean_y_tr = trimmean(y, 2 * tr * 100);
             diff_trimmed = mean_y_tr - mean_x_tr;
-            t_yuen = diff_trimmed / se_yuen;
+            t_yuen  = diff_trimmed / se_yuen;
             df_yuen = h - 1;
-            p_yuen = 2 * (1 - tcdf(abs(t_yuen), df_yuen));
-            crit_t = tinv(1 - 0.05 / 2, df_yuen);
+            p_yuen  = 2 * (1 - tcdf(abs(t_yuen), df_yuen));
+            crit_t  = tinv(1 - 0.05 / 2, df_yuen);
             ci_yuen = [diff_trimmed - crit_t * se_yuen, diff_trimmed + crit_t * se_yuen];
 
-            sp_win = sqrt(((n - 1) * s1sq + (n - 1) * s2sq) / (2 * n - 2));
+            sp_win     = sqrt(((n - 1) * s1sq + (n - 1) * s2sq) / (2 * n - 2));
             akp_effect = akp_cterm * diff_trimmed / sp_win;
 
-            % Bootstrap CI for Independent AKP effect size (2000 reps)
             nboot_akp = 2000;
-            akp_boot = zeros(nboot_akp, 1);
-            rng(42); % Reproducibility
+            akp_boot  = zeros(nboot_akp, 1);
+            rng(42, 'twister');
             for b = 1:nboot_akp
                 b_idx = randi(n, [n, 1]);
                 bx = x(b_idx);
@@ -208,7 +199,7 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
 
                 b_s1sq = var(b_win_x);
                 b_s2sq = var(b_win_y);
-                b_sp = sqrt(((n - 1) * b_s1sq + (n - 1) * b_s2sq) / (2 * n - 2));
+                b_sp   = sqrt(((n - 1) * b_s1sq + (n - 1) * b_s2sq) / (2 * n - 2));
                 if b_sp > 0
                     akp_boot(b) = akp_cterm * (trimmean(by, 2 * tr * 100) - trimmean(bx, 2 * tr * 100)) / b_sp;
                 else
@@ -217,30 +208,27 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
             end
             akp_ci = [prctile(akp_boot, 2.5), prctile(akp_boot, 97.5)];
 
-            % --- 4b. Dependent AKP Effect Size (WRS2 dep.effect / D.akp.effect, dz-scale) ---
+            % --- 4b. Dependent AKP Effect Size ---
             [dep_akp_effect, dep_akp_ci] = calc_dependent_akp(y, x, tr, 2000, 42);
 
             % --- 5. Paired Sign-Flip Permutation t-Test (10,000 iterations) ---
-            % Run ONLY if non-normal or if outliers exist
             nperm = 10000;
             if ~is_normal || has_outliers
-                rng(42); % Reproducibility
-                signs = (rand(nperm, n) > 0.5) * 2 - 1; % Matrix of +/- 1
-                perm_diffs = signs .* repmat(diff_vec(:)', nperm, 1);
-                perm_means = mean(perm_diffs, 2);
-                perm_sds = std(perm_diffs, 0, 2);
+                rng(42, 'twister');
+                signs = (rand(nperm, n) > 0.5) * 2 - 1;
+                perm_diffs  = signs .* repmat(diff_vec(:)', nperm, 1);
+                perm_means  = mean(perm_diffs, 2);
+                perm_sds    = std(perm_diffs, 0, 2);
                 perm_tstats = perm_means ./ (perm_sds / sqrt(n));
 
-                p_perm = (1 + sum(abs(perm_tstats) >= abs(t_stat))) / (1 + nperm);
-
-                % Permutation bootstrap CI for mean difference
+                p_perm  = (1 + sum(abs(perm_tstats) >= abs(t_stat))) / (1 + nperm);
                 ci_perm = [prctile(perm_means, 2.5), prctile(perm_means, 97.5)];
-                p_perm_str = sprintf('%.4f', p_perm);
+                p_perm_str  = sprintf('%.4f', p_perm);
                 ci_perm_str = sprintf('[%.3f, %.3f]', ci_perm(1), ci_perm(2));
             else
-                p_perm = NaN;
+                p_perm  = NaN;
                 ci_perm = [NaN, NaN];
-                p_perm_str = 'N/A (Normal)';
+                p_perm_str  = 'N/A (Normal)';
                 ci_perm_str = 'N/A (Normal)';
             end
 
@@ -253,7 +241,6 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
                 formatted_report = sprintf('Parametric t(%d)=%.2f (p=%.4f), dz=%.2f', df_param, t_stat, p_param, cohens_dz);
             end
 
-            % Save into struct
             res = struct();
             res.N = n;
             res.mean_diff = mean_diff;
@@ -287,35 +274,17 @@ function [norm_perm_struct, norm_perm_table] = test_normality_and_permutations(r
 
             norm_perm_struct.(flav).(dv) = res;
 
-            % Add row for master table
             all_rows = [all_rows; { ...
-                string(flav), ...
-                string(label), ...
-                n, ...
-                round(mean_diff, 4), ...
-                round(sd_diff, 4), ...
-                round(t_stat, 3), ...
-                round(p_param, 4), ...
-                sprintf('[%.3f, %.3f]', ci_param(1), ci_param(2)), ...
-                round(cohens_dz, 3), ...
-                round(p_lillie, 4), ...
-                round(p_jb, 4), ...
-                round(skew_val, 2), ...
-                round(kurt_val, 2), ...
-                string(ternary(is_normal, 'Yes', 'No')), ...
-                n_outliers, ...
-                string(ternary(has_outliers, 'Yes', 'No')), ...
-                round(t_yuen, 3), ...
-                round(p_yuen, 4), ...
-                sprintf('[%.3f, %.3f]', ci_yuen(1), ci_yuen(2)), ...
-                round(akp_effect, 3), ...
-                sprintf('[%.3f, %.3f]', akp_ci(1), akp_ci(2)), ...
-                round(dep_akp_effect, 3), ...
-                sprintf('[%.3f, %.3f]', dep_akp_ci(1), dep_akp_ci(2)), ...
-                string(p_perm_str), ...
-                string(ci_perm_str), ...
-                string(formatted_report) ...
-            }];
+                string(flav), string(label), n, ...
+                round(mean_diff, 4), round(sd_diff, 4), ...
+                round(t_stat, 3), round(p_param, 4), sprintf('[%.3f, %.3f]', ci_param(1), ci_param(2)), round(cohens_dz, 3), ...
+                round(p_lillie, 4), round(p_jb, 4), round(skew_val, 2), round(kurt_val, 2), string(ternary(is_normal, 'Yes', 'No')), ...
+                n_outliers, string(ternary(has_outliers, 'Yes', 'No')), ...
+                round(t_yuen, 3), round(p_yuen, 4), sprintf('[%.3f, %.3f]', ci_yuen(1), ci_yuen(2)), ...
+                round(akp_effect, 3), sprintf('[%.3f, %.3f]', akp_ci(1), akp_ci(2)), ...
+                round(dep_akp_effect, 3), sprintf('[%.3f, %.3f]', dep_akp_ci(1), dep_akp_ci(2)), ...
+                string(p_perm_str), string(ci_perm_str), string(formatted_report) ...
+            }]; %#ok<AGROW>
         end
     end
 

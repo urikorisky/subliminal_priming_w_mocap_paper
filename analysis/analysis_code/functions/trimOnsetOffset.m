@@ -14,6 +14,7 @@
 function [trajs_mat, onsets, offsets, onsets_idx, offsets_idx] = trimOnsetOffset(trajs_mat, time_mat, p)
     thresh.v = 0.02; % onset and offset velocity threshold (m/s).
     thresh.a = 0.02; % onset acceleration threshold (m/s^2).
+    thresh.dt = p.SAMPLE_RATE_SEC; % Sampling rate for calculating acceleration from velocity
     
     onsets  = NaN(p.NUM_TRIALS,1);
     offsets = NaN(p.NUM_TRIALS,1);
@@ -87,7 +88,7 @@ function onset = getOnset(velocities, thresh)
             velocities(2 : end-2) > thresh.v & ...
             velocities(3 : end-1) > thresh.v & ...
             velocities(4 : end) > thresh.v & ...
-            (velocities(4 : end) - velocities(1 : end-3)) >= thresh.a;
+            (velocities(4 : end) - velocities(1 : end-3))/(3*thresh.dt) >= thresh.a;
     % Check if sub didn't move
     if isempty(find(onsets,1))
         onset = 1;

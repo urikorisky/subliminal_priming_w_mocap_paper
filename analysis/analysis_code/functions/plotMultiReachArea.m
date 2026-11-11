@@ -24,6 +24,16 @@ function outStats = plotMultiReachArea(traj_names, plt_p, p,plotFlag)
                 yLabel = 'Area (z-score)';
             end
 
+            total_ra = [];
+            if isfield(reach_avg_each.ra, 'total')
+                total_ra = reach_avg_each.ra.total(good_subs);
+                if ~p.NORMALIZE_WITHIN_SUB && ~p.NORM_TRAJ
+                    if mean(total_ra, 'omitnan') < 0.5
+                        total_ra = total_ra * 10000;
+                    end
+                end
+            end
+
             if(plotFlag)    
                 % Load data and set params.
                 beesdata = {con_ra, incon_ra};
@@ -71,13 +81,8 @@ function outStats = plotMultiReachArea(traj_names, plt_p, p,plotFlag)
 
             % T-test and Cohen's dz
             [~, p_val_ra, ci_ra, stats_ra] = ttest(reach_avg_each.ra.con(good_subs), reach_avg_each.ra.incon(good_subs));
-    %         cohens_dz_ra = stats_ra.tstat / sqrt(length(good_subs));
-    %         graph_height = y_limit(2) - y_limit(1);
-    %         text(mean(ticks(1:2)), graph_height/10, ['p-value: ' num2str(p_val_ra)], 'HorizontalAlignment','center', 'FontSize',14);
-    %         text(mean(ticks(1:2)), graph_height/7, ['Cohens d_z: ' num2str(cohens_dz_ra)], 'HorizontalAlignment','center', 'FontSize',14);
     
             % Print stats to terminal.
-            outStats = printStats('Reach Area', reach_avg_each.ra.con(good_subs), ...
-                reach_avg_each.ra.incon(good_subs), ["Con","Incon"], p_val_ra, ci_ra, stats_ra);
+            outStats = printStats('Reach Area', con_ra, incon_ra, ["Con","Incon"], p_val_ra, ci_ra, stats_ra, total_ra);
         end
 end

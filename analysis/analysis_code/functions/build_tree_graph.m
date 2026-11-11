@@ -2,16 +2,13 @@ function [G, node_info] = build_tree_graph(tree_type, full_stats_tables, sensiti
 % BUILD_TREE_GRAPH Dynamically constructs a directed graph (digraph) for TreeBH
 %
 % Supported tree_type:
-%   'Tree1_Main'        - Unified main text congruency tree (Flavor 1: TrajNorm_noStandardization)
-%                         Partitions PR Confirmatory, PR Exploratory, and Post-Hoc Exploratory.
-%   'TreeS1_Original'   - Original 2022 OSF pre-registered tree (Flavor 1: TrajNorm_noStandardization)
+%   'Tree1_Main'        - Congruency effect analysis (TrajNorm_noStandardization)
+%                         Nested Reaching topology: Confirmatory vs. Exploratory -> [Pre-Registered, Post-Hoc]
+%   'TreeS1_Original'   - Figure S1: Original 2022 OSF pre-registered congruency tree (TrajNorm_noStandardization)
 %                         Un-pruned Heading Angle, strictly pre-registered metrics.
-%   'TreeS2_Standard'   - Parallel robustness tree (Flavor 2: TrajNorm_Standardization)
-%   'Tree2_Sensitivity' - Relative sensitivity tree (Flavor 1 Reaching vs. Keyboard RT)
-%
-% Returns:
-%   G         - MATLAB digraph object with properties: name, p, is_posthoc, branch
-%   node_info - Struct table with detailed node metadata
+%   'TreeS2_Standard'   - Figure S2 (a): Standardized robustness test of Tree 1 (TrajNorm_Standardization)
+%   'Tree2_Sensitivity' - Tree 2: Sensitivity analysis vs. Keyboard RT (TrajNorm_noStandardization)
+%   'TreeSI2_Standard'  - Figure S2 (b): Standardized robustness test of Tree 2 (TrajNorm_Standardization)
 
 if nargin < 3
     sensitivity_data = [];
@@ -27,11 +24,11 @@ switch tree_type
             is_flavor2 = true;
         end
         [G, node_info] = build_congruency_tree(full_stats_tables, flav_name, false, is_flavor2);
-        
+
     case 'TreeS1_Original'
         flav_name = 'TrajNorm_noStandardization';
         [G, node_info] = build_congruency_tree(full_stats_tables, flav_name, true, false);
-        
+
     case {'Tree2_Sensitivity', 'TreeSI2_Standard', 'TreeSI2_Sensitivity_Standard', 'TreeS2_Sensitivity'}
         if contains(tree_type, 'Standard') || contains(tree_type, 'SI2')
             flav_name = 'TrajNorm_Standardization';
@@ -39,54 +36,71 @@ switch tree_type
             flav_name = 'TrajNorm_noStandardization';
         end
         [G, node_info] = build_sensitivity_tree(full_stats_tables, sensitivity_data, flav_name);
-        
+
     otherwise
         error('Unknown tree_type: %s', tree_type);
 end
 
 end
 
-%% Subfunction: Build Congruency Tree (Tree 1, Tree S1, Tree S2)
-function [G, node_info] = build_congruency_tree(statsTables, flavor, is_s1_prereg, is_flavor2)
-% Extracts p-values for discrete and trajectory cluster variables
+%% Subfunction: Build Congruency Tree (Tree 1, Figure S1, Figure S2a)
+function [G, node_info] = build_congruency_tree(statsTables, flavor, is_s1_prereg, ~)
 stats_tab = statsTables.analyzed_stats_tables;
-norm_tab = statsTables.Normality_and_Permutations_Table;
-traj_tab = statsTables.fullTrajAnalysis;
+norm_tab  = statsTables.Normality_and_Permutations_Table;
+traj_tab  = statsTables.fullTrajAnalysis;
+
+% Continuous trajectories in TrajNorm_Standardization are identical to TrajNorm_noStandardization
+traj_flavor = 'TrajNorm_noStandardization';
 
 % Helper to get robust or parametric p-value from Normality table
 get_p = @(var_name) get_best_p(norm_tab, stats_tab, flavor, var_name);
 
 % 1. Root & Level 2 Nodes
-names   = {'Manuscript', 'Keyboard', 'Reaching'};
-parents = [NaN, 1, 1];
-p_vals  = [NaN, NaN, NaN];
+names      = {'Manuscript', 'Keyboard', 'Reaching'};
+parents    = [NaN, 1, 1];
+p_vals     = [NaN, NaN, NaN];
 is_posthoc = [false, false, false];
-branch  = {'Root', 'Keyboard', 'Reaching'};
+branch     = {'Root', 'Keyboard', 'Reaching'};
 
 % 2. Keyboard Branch
 kb_parent = 2;
 names{end+1} = 'Confirmatory_KB'; parents(end+1) = kb_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'Keyboard';
 conf_kb_idx = length(names);
 
-% Keyboard RT
 kb_p = get_p('Keyboard RT');
 names{end+1} = 'Keyboard_RT'; parents(end+1) = conf_kb_idx; p_vals(end+1) = kb_p; is_posthoc(end+1) = false; branch{end+1} = 'Keyboard';
 
 % 3. Reaching Branch
 reach_parent = 3;
 
-% 3A. Confirmatory Reaching
-names{end+1} = 'PR_Confirmatory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
-conf_reach_idx = length(names);
+if is_s1_prereg
+    % --- Figure S1: Original 2022 Pre-Registered Topology (Confirmatory vs. Exploratory) ---
+    names{end+1} = 'Confirmatory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
+    conf_reach_idx = length(names);
 
-ra_p = get_p('Reach Area');
-names{end+1} = 'Reach_Area'; parents(end+1) = conf_reach_idx; p_vals(end+1) = ra_p; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
+    ra_p = get_p('Reach Area');
+    names{end+1} = 'Reach_Area'; parents(end+1) = conf_reach_idx; p_vals(end+1) = ra_p; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
 
-% 3B. Pre-Registered Exploratory Reaching
-names{end+1} = 'PR_Exploratory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
-pr_expl_idx = length(names);
+    names{end+1} = 'Exploratory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+    pr_expl_idx = length(names);
+else
+    % --- Tree 1 & Figure S2 (a): Unified Nested Reaching Topology matching Tree 2 ---
+    % Level 3 under Reaching: Confirmatory vs. Exploratory
+    names{end+1} = 'Confirmatory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
+    conf_reach_idx = length(names);
 
-% Discrete PR Exploratory Metrics
+    ra_p = get_p('Reach Area');
+    names{end+1} = 'Reach_Area'; parents(end+1) = conf_reach_idx; p_vals(end+1) = ra_p; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
+
+    names{end+1} = 'Exploratory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'Exploratory';
+    expl_reach_idx = length(names);
+
+    % Level 4 under Exploratory_Reach: Pre-Registered vs. Post-Hoc
+    names{end+1} = 'Pre_Registered'; parents(end+1) = expl_reach_idx; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+    pr_expl_idx = length(names);
+end
+
+% Discrete Pre-Registered Exploratory Metrics
 onset_p = get_p('Reaching Onset');
 names{end+1} = 'Reaching_Onset'; parents(end+1) = pr_expl_idx; p_vals(end+1) = onset_p; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
@@ -99,9 +113,8 @@ names{end+1} = 'Total_Distance'; parents(end+1) = pr_expl_idx; p_vals(end+1) = t
 com_p = get_p('Num of COM');
 names{end+1} = 'Changes_of_Mind_COM'; parents(end+1) = pr_expl_idx; p_vals(end+1) = com_p; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
-% Continuous Trajectory Clusters (Empirical from traj_tab)
-% Deviation from center
-dev_rows = find(traj_tab.name == "Deviation From center" & traj_tab.Flavor == flavor);
+% Continuous Trajectory Clusters (from TrajNorm_noStandardization)
+dev_rows = find(traj_tab.name == "Deviation From center" & traj_tab.Flavor == traj_flavor);
 if ~isempty(dev_rows)
     for r = 1:length(dev_rows)
         cl_num = traj_tab.cluster(dev_rows(r));
@@ -117,8 +130,7 @@ else
     names{end+1} = 'Spatial_Deviation_Cluster'; parents(end+1) = pr_expl_idx; p_vals(end+1) = 1.0; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 end
 
-% Movement variation
-var_rows = find(traj_tab.name == "Movement variation" & traj_tab.Flavor == flavor);
+var_rows = find(traj_tab.name == "Movement variation" & traj_tab.Flavor == traj_flavor);
 if ~isempty(var_rows)
     for r = 1:length(var_rows)
         cl_num = traj_tab.cluster(var_rows(r));
@@ -134,38 +146,48 @@ else
     names{end+1} = 'Spatial_Variation_Cluster'; parents(end+1) = pr_expl_idx; p_vals(end+1) = 1.0; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 end
 
-% Heading angle: Included UN-PRUNED in Tree S1 (original pre-reg replication)
+% Heading Angle: Included UN-PRUNED strictly in Figure S1 (original 2022 pre-reg replication)
 if is_s1_prereg
-    head_rows = find(traj_tab.name == "Heading angle" & traj_tab.Flavor == flavor);
-    if ~isempty(head_rows)
-        for r = 1:length(head_rows)
-            cl_num = traj_tab.cluster(head_rows(r));
-            c_p = traj_tab.p_val(head_rows(r));
+    if isfield(statsTables, 's1_prereg_head_angle_stats') && ~isempty(statsTables.s1_prereg_head_angle_stats)
+        ha_tab = statsTables.s1_prereg_head_angle_stats;
+        if isstruct(ha_tab), ha_tab = struct2table(ha_tab); end
+        for r = 1:height(ha_tab)
+            cl_num = ha_tab.cluster(r);
+            c_p    = ha_tab.p_val(r);
             cl_label = sprintf('Heading_Angle_Cluster_%d', cl_num);
             names{end+1} = cl_label; parents(end+1) = pr_expl_idx; p_vals(end+1) = c_p; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
         end
     else
-        names{end+1} = 'Heading_Angle_Cluster'; parents(end+1) = pr_expl_idx; p_vals(end+1) = 1.0; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+        head_rows = find(traj_tab.name == "Heading angle" & traj_tab.Flavor == traj_flavor);
+        if ~isempty(head_rows)
+            for r = 1:length(head_rows)
+                cl_num = traj_tab.cluster(head_rows(r));
+                c_p    = traj_tab.p_val(head_rows(r));
+                cl_label = sprintf('Heading_Angle_Cluster_%d', cl_num);
+                names{end+1} = cl_label; parents(end+1) = pr_expl_idx; p_vals(end+1) = c_p; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+            end
+        else
+            names{end+1} = 'Heading_Angle_Cluster'; parents(end+1) = pr_expl_idx; p_vals(end+1) = 1.0; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+        end
     end
 end
 
-% 3C. Post-Hoc Exploratory Reaching (Only in Tree 1 and Tree S2, NOT in Tree S1)
+% Post-Hoc Exploratory Reaching (Under Exploratory_Reach in Tree 1 and Figure S2a)
 if ~is_s1_prereg
-    names{end+1} = 'PostHoc_Exploratory_Reach'; parents(end+1) = reach_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
+    names{end+1} = 'Post_Hoc'; parents(end+1) = expl_reach_idx; p_vals(end+1) = NaN; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
     posthoc_idx = length(names);
-    
+
     mad_p = get_p('Maximum Absolute Deviation (MAD)');
     names{end+1} = 'MAD'; parents(end+1) = posthoc_idx; p_vals(end+1) = mad_p; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
-    
+
     auc_p = get_p('Area Under Curve (AUC)');
     names{end+1} = 'AUC'; parents(end+1) = posthoc_idx; p_vals(end+1) = auc_p; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
-    
-    % Implied End Point (IEP): In TrajNorm, IEP is a spatial cluster
-    iep_rows = find(traj_tab.name == "iEP" & traj_tab.Flavor == flavor);
+
+    iep_rows = find(traj_tab.name == "iEP" & traj_tab.Flavor == traj_flavor);
     if ~isempty(iep_rows)
         for r = 1:length(iep_rows)
             cl_num = traj_tab.cluster(iep_rows(r));
-            c_p = traj_tab.p_val(iep_rows(r));
+            c_p    = traj_tab.p_val(iep_rows(r));
             if length(iep_rows) == 1
                 cl_label = 'Implied_End_Point_Cluster';
             else
@@ -173,92 +195,93 @@ if ~is_s1_prereg
             end
             names{end+1} = cl_label; parents(end+1) = posthoc_idx; p_vals(end+1) = c_p; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
         end
+    else
+        names{end+1} = 'Implied_End_Point_Cluster'; parents(end+1) = posthoc_idx; p_vals(end+1) = 1.0; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
     end
 end
 
 % Construct Digraph
-num_nodes = length(names);
+num_nodes    = length(names);
 edge_sources = parents(2:end);
 edge_targets = 2:num_nodes;
 
 G = digraph(edge_sources, edge_targets);
-G.Nodes.name = names';
-G.Nodes.p = p_vals';
+G.Nodes.name       = names';
+G.Nodes.p          = p_vals';
 G.Nodes.is_posthoc = is_posthoc';
-G.Nodes.branch = branch';
+G.Nodes.branch     = branch';
 
 node_info = table(names', parents', p_vals', is_posthoc', branch', ...
     'VariableNames', {'name', 'parent', 'p', 'is_posthoc', 'branch'});
 end
 
-%% Subfunction: Build Relative Sensitivity Tree (Tree 2)
-function [G, node_info] = build_sensitivity_tree(statsTables, sens_data, flavor)
-% Root
-names   = {'Sensitivity_Advantage', 'Confirmatory_Comparison', 'Exploratory_Comparisons'};
-parents = [NaN, 1, 1];
-p_vals  = [NaN, NaN, NaN];
+%% Subfunction: Build Relative Sensitivity Tree (Tree 2 & Figure S2b)
+function [G, node_info] = build_sensitivity_tree(~, sens_data, flavor)
+names      = {'Sensitivity_Advantage', 'Confirmatory', 'Exploratory'};
+parents    = [NaN, 1, 1];
+p_vals     = [NaN, NaN, NaN];
 is_posthoc = [false, false, false];
-branch  = {'Root', 'Confirmatory', 'Exploratory'};
+branch     = {'Root', 'Confirmatory', 'Exploratory'};
 
-% Confirmatory Comparison: Reach Area vs. Keyboard RT (Two-sided bootstrap p)
+% Confirmatory Comparison: Reach Area vs. Keyboard RT
 conf_comp_parent = 2;
 p_ra_kb = get_comp_p(sens_data, flavor, 'ra', 'kb_rt');
-names{end+1} = 'Diff_Reach_Area_vs_KB'; parents(end+1) = conf_comp_parent; p_vals(end+1) = p_ra_kb; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
+names{end+1} = 'Reach_Area_vs_KB'; parents(end+1) = conf_comp_parent; p_vals(end+1) = p_ra_kb; is_posthoc(end+1) = false; branch{end+1} = 'Confirmatory';
 
 % Exploratory Comparisons
 expl_comp_parent = 3;
 
 % Pre-Registered Exploratory Contrasts
-names{end+1} = 'PR_Exploratory_Diffs'; parents(end+1) = expl_comp_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'Pre_Registered'; parents(end+1) = expl_comp_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 pr_diff_idx = length(names);
 
 p_mt_kb = get_comp_p(sens_data, flavor, 'mt', 'kb_rt');
-names{end+1} = 'Diff_MT_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_mt_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'MT_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_mt_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 p_tot_kb = get_comp_p(sens_data, flavor, 'tot_dist', 'kb_rt');
-names{end+1} = 'Diff_Total_Dist_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_tot_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'Total_Dist_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_tot_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 p_react_kb = get_comp_p(sens_data, flavor, 'react', 'kb_rt');
-names{end+1} = 'Diff_Onset_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_react_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'Onset_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_react_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 p_com_kb = get_comp_p(sens_data, flavor, 'com', 'kb_rt');
-names{end+1} = 'Diff_COM_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_com_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'COM_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_com_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 p_dev_kb = get_comp_p(sens_data, flavor, 'traj', 'kb_rt');
-names{end+1} = 'Diff_Spatial_Dev_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_dev_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'Spatial_Dev_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_dev_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 p_var_kb = get_comp_p(sens_data, flavor, 'x_std', 'kb_rt');
-names{end+1} = 'Diff_Spatial_Var_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_var_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
+names{end+1} = 'Spatial_Var_vs_KB'; parents(end+1) = pr_diff_idx; p_vals(end+1) = p_var_kb; is_posthoc(end+1) = false; branch{end+1} = 'PRExploratory';
 
 % Post-Hoc Exploratory Contrasts
-names{end+1} = 'PostHoc_Exploratory_Diffs'; parents(end+1) = expl_comp_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
+names{end+1} = 'Post_Hoc'; parents(end+1) = expl_comp_parent; p_vals(end+1) = NaN; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
 posthoc_diff_idx = length(names);
 
 p_mad_kb = get_comp_p(sens_data, flavor, 'mad', 'kb_rt');
-names{end+1} = 'Diff_MAD_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_mad_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
+names{end+1} = 'MAD_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_mad_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
 
 p_auc_kb = get_comp_p(sens_data, flavor, 'auc', 'kb_rt');
-names{end+1} = 'Diff_AUC_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_auc_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
+names{end+1} = 'AUC_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_auc_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
 
 p_iep_kb = get_comp_p(sens_data, flavor, 'iep', 'kb_rt');
-names{end+1} = 'Diff_IEP_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_iep_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
+names{end+1} = 'IEP_vs_KB'; parents(end+1) = posthoc_diff_idx; p_vals(end+1) = p_iep_kb; is_posthoc(end+1) = true; branch{end+1} = 'PostHoc';
 
 % Construct Digraph
-num_nodes = length(names);
+num_nodes    = length(names);
 edge_sources = parents(2:end);
 edge_targets = 2:num_nodes;
 
 G = digraph(edge_sources, edge_targets);
-G.Nodes.name = names';
-G.Nodes.p = p_vals';
+G.Nodes.name       = names';
+G.Nodes.p          = p_vals';
 G.Nodes.is_posthoc = is_posthoc';
-G.Nodes.branch = branch';
+G.Nodes.branch     = branch';
 
 node_info = table(names', parents', p_vals', is_posthoc', branch', ...
     'VariableNames', {'name', 'parent', 'p', 'is_posthoc', 'branch'});
 end
 
-%% Helper: Extract Best P-Value (Robust when available)
+%% Helper: Extract Best P-Value (Robust when outliers exist)
 function p_val = get_best_p(norm_tab, stats_tab, flavor, var_name)
 p_val = NaN;
 if istable(norm_tab) && ismember('Flavor', norm_tab.Properties.VariableNames)
@@ -295,16 +318,14 @@ if isnan(p_val)
 end
 end
 
-%% Helper: Extract Pairwise Contrast P-Value (Two-Sided Bootstrap)
+%% Helper: Extract Pairwise Contrast P-Value
 function p_val = get_comp_p(sens_data, flavor, f1, f2)
 p_val = NaN;
 if isempty(sens_data) || ~istable(sens_data)
-    % Fallback: compute default
     p_val = 0.05;
     return;
 end
 
-% Look for matching comparison name in within_tbl or cross_tbl
 pat1 = sprintf('%s_minus_%s', f1, f2);
 pat2 = sprintf('%s_minus_%s', f2, f1);
 
@@ -312,7 +333,6 @@ idx = find(sens_data.Flavor == flavor & (sens_data.Comparison == pat1 | sens_dat
 if ~isempty(idx)
     p_val = sens_data.P_Value(idx(1));
 else
-    % Try matching without flavor column
     idx = find(sens_data.Comparison == pat1 | sens_data.Comparison == pat2);
     if ~isempty(idx)
         p_val = sens_data.P_Value(idx(1));

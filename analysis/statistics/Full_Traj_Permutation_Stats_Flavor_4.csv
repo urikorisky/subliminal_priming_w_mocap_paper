@@ -1,0 +1,4 @@
+Flavor,name,cluster,start_time,end_time,cluster_size,p_val,cohens_dz,t*,p_Val_TreeBH_Corrected
+TrajNorm_noTimeExclusion,Deviation From center,1,10,194,871.564016619635,0,0.785192807765437,7.82198010446816,0
+TrajNorm_noTimeExclusion,iEP,1,12,163,713.576050925863,0,0.782429880401165,10.7101665976795,0
+TrajNorm_noTimeExclusion,Movement variation,1,119,195,336.500999673855,0.00559760599684367,0.728357142151202,5.16628514001781,0.00559760599684367

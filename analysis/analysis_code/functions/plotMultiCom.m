@@ -59,12 +59,15 @@ function [outStats] = plotMultiCom(traj_names, plt_p, p,plotFlag)
             % T-test On plot
             [~, p_val, ~, ~] = ttest(beesdata{1}, beesdata{2});
         end
-%         text(mean(ticks(1:2)), (max([beesdata{1:2}])+0.005), ['p: ' num2str(p_val)], 'HorizontalAlignment','center', 'FontSize',14);
-%         [~, p_val, ~, ~] = ttest(beesdata{3}, beesdata{4});
-%         text(mean(ticks(3:4)), (max([beesdata{3:4}])+0.005), ['p: ' num2str(p_val)], 'HorizontalAlignment','center', 'FontSize',14);
+
+        total_com = [];
+        if isfield(reach_avg_each(iTraj).com, 'total')
+            total_com = reach_avg_each(iTraj).com.total(good_subs);
+        end
+
         % T-test and Cohen's dz
         [~, p_val, ci, stats] = ttest(reach_avg_each.com(iTraj).con(good_subs), reach_avg_each.com(iTraj).incon(good_subs));
         outStats = printStats('Num of COM', reach_avg_each.com(iTraj).con(good_subs), ...
-            reach_avg_each.com(iTraj).incon(good_subs), ["Con","Incon"], p_val, ci, stats);
+            reach_avg_each.com(iTraj).incon(good_subs), ["Con","Incon"], p_val, ci, stats, total_com);
     end
 end

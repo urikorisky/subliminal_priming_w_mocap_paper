@@ -1,9 +1,10 @@
 % Plots the average trajectories (over multiple subs) with a shade of CI around them.
 % plt_p - struct of plotting params.
 % p - struct of exp params.
-function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
+function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p, plotFlag)
 
-    if(~plotFlag)
+    if (~plotFlag)
+        outStats = [];
         return;
     end
     outStats = [];
@@ -24,21 +25,20 @@ function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
 
         % Plot time instead of Z axis.
         if plt_p.x_as_func_of == "time"
-            assert(~p.NORM_TRAJ, "When traj is normalized in space, time isn't releveant and shouldnt be used");
-            % Array with timing of each sample.
+            assert(~p.NORM_TRAJ, "When traj is normalized in space, time isn't relevant and shouldn't be used");
             time_series = (1 : size(subs_avg.traj.con_left,1)) * p.SAMPLE_RATE_SEC * 1000;
             left_axis = time_series;
             y_label = 'Time (ms)';
-            xlimit = [-15 15]; % For plot.
-            ylimit = [0 p.MIN_SAMP_LEN] * 1000;
-            y_ticks = plt_p.time_ticks;
+            xlimit = [-15 15];
+            ylimit = [0 p.MIN_SAMP_LEN * 1000];
+            y_ticks = 0 : 50 : (p.MIN_SAMP_LEN * 1000);
         else
-            left_axis = subs_avg.traj.con_left(:,3)*100;
-            assert(p.NORM_TRAJ, "Uses identical Z to all trajs, assumes trajs are normalized.")
+            left_axis = subs_avg.traj.con_left(:,3) * 100;
+            assert(p.NORM_TRAJ, "Uses identical Z to all trajs, assumes trajs are normalized.");
             y_label = 'Path Traveled (%)';
             xlimit = [-15 15];
             ylimit = [0 100];
-            y_ticks = plt_p.percent_path_ticks;
+            y_ticks = 0 : 20 : 100;
         end
 
         % Plot avg with shade.
@@ -46,8 +46,9 @@ function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
         stdshade(avg_each.traj(iTraj).con_right(:,good_subs,1)', plt_p.f_alpha*0.9, plt_p.con_col, left_axis, 0, 0, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
         stdshade(avg_each.traj(iTraj).incon_left(:,good_subs,1)', plt_p.f_alpha*0.9, plt_p.incon_col, left_axis, 0, 0, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
         stdshade(avg_each.traj(iTraj).incon_right(:,good_subs,1)', plt_p.f_alpha*0.9, plt_p.incon_col, left_axis, 0, 0, plt_p.errbar_type, plt_p.alpha_size, plt_p.linewidth);
-        
-        % Permutation testing across trajectory
+
+        % Deterministic permutation testing across trajectory
+        rng(42, 'twister');
         clusters = permCluster(avg_each.traj.con(:,good_subs,1), avg_each.traj.incon(:,good_subs,1), plt_p.n_perm, plt_p.n_perm_clust_tests);
 
         % Plot clusters.
@@ -65,24 +66,20 @@ function [outStats] = plotMultiAvgTrajWithShade(traj_names, plt_p, p,plotFlag)
         ylim(ylimit);
         yticks(y_ticks);
         ylabel(y_label);
-        title('Average Trajectory');
+        title('Deviation From Center');
         set(gca, 'FontSize',plt_p.font_size);
         set(gca, 'FontName',plt_p.font_name);
-        set(gca,'linewidth',plt_p.axes_line_thickness);
+        set(gca, 'linewidth',plt_p.axes_line_thickness);
+
         % Legend.
         h = [];
         h(1) = plot(nan,nan,'Color',plt_p.con_col, 'linewidth',plt_p.linewidth);
         h(2) = plot(nan,nan,'Color',plt_p.incon_col, 'linewidth',plt_p.linewidth);
         graphs = {'Congruent', 'Incongruent'};
-%         if ~isempty(clusters)
-%             h(3) = plot(nan,nan,'Color',[1, 1, 1, plt_p.f_alpha/2], 'linewidth',plt_p.linewidth);
-%             graphs{3} = 'Significant';
-%         end
         legend(h, graphs, 'Location','southeast');
         legend('boxoff');
 
         if ~isempty(clusters)
-            % Print stats to terminal.
             outStats = printTsStats('Deviation From center', clusters);
         end
     end

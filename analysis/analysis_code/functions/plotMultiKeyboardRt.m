@@ -21,6 +21,14 @@ function [outStats] = plotMultiKeyboardRt(traj_names, plt_p, p)
             incon_rt = incon_rt * 1000;
         end
 
+        total_rt = [];
+        if isfield(keyboard_avg_each.rt(iTraj), 'total')
+            total_rt = keyboard_avg_each.rt(iTraj).total(good_subs);
+            if ~p.NORMALIZE_WITHIN_SUB && mean(total_rt, 'omitnan') < 10
+                total_rt = total_rt * 1000;
+            end
+        end
+
         if(plotFlag)
             % Load data and prep params.
             beesdata = {con_rt, incon_rt};
@@ -61,20 +69,11 @@ function [outStats] = plotMultiKeyboardRt(traj_names, plt_p, p)
             set(gca, 'FontName',plt_p.font_name);
             set(gca, 'linewidth',plt_p.axes_line_thickness);
         end
-        % Legend.
-%         h = [];
-%         h(1) = bar(NaN,NaN,'FaceColor',plt_p.con_col);
-%         h(2) = bar(NaN,NaN,'FaceColor',plt_p.incon_col);
-%         legend(h,'Con','Incon', 'Location','northwest');
     
         % T-test and Cohen's dz
         [~, p_val_rt, ci_rt, stats_rt] = ttest(keyboard_avg_each.rt(iTraj).con(good_subs), keyboard_avg_each.rt(iTraj).incon(good_subs));
 
         % Print stats to terminal.
-        outStats = printStats('Keyboard RT', keyboard_avg_each.rt(iTraj).con(good_subs), ...
-            keyboard_avg_each.rt(iTraj).incon(good_subs), ["Con","Incon"], p_val_rt, ci_rt, stats_rt);
-        % disp('Between TRIALS rt std: ');
-        % disp(['Con: ', num2str(mean(keyboard_avg_each.rt_std.con(good_subs)))]);
-        % disp(['Incon: ', num2str(mean(keyboard_avg_each.rt_std.incon(good_subs)))]);
+        outStats = printStats('Keyboard RT', con_rt, incon_rt, ["Con","Incon"], p_val_rt, ci_rt, stats_rt, total_rt);
     end
 end

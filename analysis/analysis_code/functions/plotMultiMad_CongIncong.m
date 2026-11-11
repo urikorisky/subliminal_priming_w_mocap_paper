@@ -53,22 +53,17 @@ function [outStats] = plotMultiMad_CongIncong(traj_names, plt_p, p,plotFlag)
                 set(gca, 'FontName',plt_p.font_name);
                 set(gca, 'linewidth',plt_p.axes_line_thickness);
             end
-        % Legend.
-%         h = [];
-%         h(1) = bar(NaN,NaN,'FaceColor',plt_p.con_col, 'ShowBaseLine','off');
-%         h(2) = bar(NaN,NaN,'FaceColor',plt_p.incon_col, 'ShowBaseLine','off');
-%         h(3) = plot(NaN,NaN,'k','linewidth',14);
-%         legend(h,'Congruent','Incongruent', 'Location','northwest');
 
-        % T-test and Cohen's dz
-        [~, p_val_mad, ci_mad, stats_mad] = ttest(reach_avg_each.mad.con(good_subs), reach_avg_each.mad.incon(good_subs));
-%         cohens_dz_ra = stats_ra.tstat / sqrt(length(good_subs));
-%         graph_height = y_limit(2) - y_limit(1);
-%         text(mean(ticks(1:2)), graph_height/10, ['p-value: ' num2str(p_val_ra)], 'HorizontalAlignment','center', 'FontSize',14);
-%         text(mean(ticks(1:2)), graph_height/7, ['Cohens d_z: ' num2str(cohens_dz_ra)], 'HorizontalAlignment','center', 'FontSize',14);
+            total_mad = [];
+            if isfield(reach_avg_each.mad, 'total')
+                total_mad = reach_avg_each.mad.total(good_subs);
+            end
 
-        % Print stats to terminal.
-        outStats = printStats('Maximum Absolute Deviation (MAD)', reach_avg_each.mad.con(good_subs), ...
-            reach_avg_each.mad.incon(good_subs), ["Con","Incon"], p_val_mad, ci_mad, stats_mad);
+            % T-test and Cohen's dz
+            [~, p_val_mad, ci_mad, stats_mad] = ttest(reach_avg_each.mad.con(good_subs), reach_avg_each.mad.incon(good_subs));
+
+            % Print stats to terminal.
+            outStats = printStats('Maximum Absolute Deviation (MAD)', reach_avg_each.mad.con(good_subs), ...
+                reach_avg_each.mad.incon(good_subs), ["Con","Incon"], p_val_mad, ci_mad, stats_mad, total_mad);
         end
 end

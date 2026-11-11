@@ -19,6 +19,10 @@ function [outStats] = plotMultiTotDist(traj_names, plt_p, p,plotFlag)
         reach_avg_each(iTraj).tot_dist.con_right = reach_avg_each(iTraj).tot_dist.con_right * 100;
         reach_avg_each(iTraj).tot_dist.incon_left = reach_avg_each(iTraj).tot_dist.incon_left * 100;
         reach_avg_each(iTraj).tot_dist.incon_right = reach_avg_each(iTraj).tot_dist.incon_right * 100;
+        if isfield(reach_avg_each(iTraj).tot_dist, 'total')
+            reach_avg_each(iTraj).tot_dist.total = reach_avg_each(iTraj).tot_dist.total * 100;
+        end
+
         if(plotFlag)
             % Load data and set parameters.
             beesdata = {reach_avg_each(iTraj).tot_dist.con(good_subs), reach_avg_each(iTraj).tot_dist.incon(good_subs)};
@@ -71,12 +75,15 @@ function [outStats] = plotMultiTotDist(traj_names, plt_p, p,plotFlag)
             % T-test On plot
             [~, p_val, ~, ~] = ttest(beesdata{1}, beesdata{2});
         end
-%         text(mean(ticks(1:2)), (max([beesdata{1:2}])+0.005), ['p: ' num2str(p_val)], 'HorizontalAlignment','center', 'FontSize',14);
-%         [~, p_val, ~, ~] = ttest(beesdata{3}, beesdata{4});
-%         text(mean(ticks(3:4)), (max([beesdata{3:4}])+0.005), ['p: ' num2str(p_val)], 'HorizontalAlignment','center', 'FontSize',14);
+
+        total_dist = [];
+        if isfield(reach_avg_each(iTraj).tot_dist, 'total')
+            total_dist = reach_avg_each(iTraj).tot_dist.total(good_subs);
+        end
+
         % T-test and Cohen's dz
         [~, p_val, ci, stats] = ttest(reach_avg_each.tot_dist.con(good_subs), reach_avg_each.tot_dist.incon(good_subs));
         outStats = printStats('Total Distance Traveled', reach_avg_each.tot_dist.con(good_subs), ...
-            reach_avg_each.tot_dist.incon(good_subs), ["Con","Incon"], p_val, ci, stats);
+            reach_avg_each.tot_dist.incon(good_subs), ["Con","Incon"], p_val, ci, stats, total_dist);
     end
 end

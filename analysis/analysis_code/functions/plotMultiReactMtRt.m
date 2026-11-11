@@ -61,19 +61,18 @@ function [outStatsRT,outStatsMT] = plotMultiReactMtRt(traj_names, subplot_p, plt
                 set(gca, 'FontName',plt_p.font_name);
                 set(gca, 'linewidth',plt_p.axes_line_thickness);
             end
-            % Legend.
-%             h = [];
-%             h(1) = bar(NaN,NaN,'FaceColor',plt_p.con_col, 'ShowBaseLine','off');
-%             h(2) = bar(NaN,NaN,'FaceColor',plt_p.incon_col, 'ShowBaseLine','off');
-%             legend(h,'Con','Incon', 'Location','northwest');
         
             % T-test and Cohen's dz
             [~, p_val_temp, ci, stats] = ttest(data.con(good_subs), data.incon(good_subs));
-            % p_vals.(vars(j)) = p_val_temp;
+
+            total_data = [];
+            if isfield(data, 'total')
+                total_data = data.total(good_subs);
+            end
     
             % Print stats to terminal.
             outStatsTables{j} = printStats(titles(j), data.con(good_subs), ...
-                data.incon(good_subs), ["Con","Incon"], p_val_temp, ci, stats);
+                data.incon(good_subs), ["Con","Incon"], p_val_temp, ci, stats, total_data);
         end
     end
     outStatsRT = outStatsTables{1};

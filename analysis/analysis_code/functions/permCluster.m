@@ -17,6 +17,20 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
     alpha = 0.05;
     thresh = tinv(1 - alpha/2, size(data1, 2) - 1);
 
+    % Check for cached permutation result
+    cache_dir = '../processed_data/cache';
+    cache_key = sprintf('perm_%d_%d_%.4f_%.4f_%d_%d', size(data1,1), size(data1,2), data1(1,1), data2(1,1), n_perm, n_perm_clust_tests);
+    cache_key = regexprep(cache_key, '[^a-zA-Z0-9_]', '_');
+    cache_file = fullfile(cache_dir, [cache_key '.mat']);
+    if exist(cache_file, 'file')
+        try
+            c_data = load(cache_file);
+            clusters = c_data.clusters;
+            return;
+        catch
+        end
+    end
+
     clusters_dist = [];
 
     lastStr = '';
@@ -70,6 +84,13 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
     % Remove non-significant clusters.
     alpha = alpha / n_perm_clust_tests; % Correction for having 'n_perm_clust_tests' clustering analysis (multiple comparisons).
     clusters(clusters.p_val > alpha, :) = [];
+
+    % Save to cache
+    try
+        if ~exist(cache_dir, 'dir'), mkdir(cache_dir); end
+        save(cache_file, 'clusters');
+    catch
+    end
 end
 
 % Receives 2 matrices, each row is a sample, each colum is a subject.
