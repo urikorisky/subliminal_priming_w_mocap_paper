@@ -17,10 +17,14 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
     alpha = 0.05;
     thresh = tinv(1 - alpha/2, size(data1, 2) - 1);
 
-    % Check for cached permutation result
+    % Check for cached permutation result (hash full data matrices + parameters to avoid prefix collisions)
     cache_dir = '../processed_data/cache';
-    cache_key = sprintf('perm_%d_%d_%.4f_%.4f_%d_%d', size(data1,1), size(data1,2), data1(1,1), data2(1,1), n_perm, n_perm_clust_tests);
-    cache_key = regexprep(cache_key, '[^a-zA-Z0-9_]', '_');
+    hash_vec = double([size(data1), size(data2), n_perm, n_perm_clust_tests, data1(:)', data2(:)']);
+    hash_vec(hash_vec == 0) = 0; % normalize -0.0 to +0.0
+    md = java.security.MessageDigest.getInstance('SHA-256');
+    digest = typecast(md.digest(typecast(hash_vec, 'uint8')), 'uint8');
+    hash_hex = lower(reshape(dec2hex(digest, 2).', 1, []));
+    cache_key = sprintf('perm_%d_%d_%s', size(data1,1), size(data1,2), hash_hex(1:16));
     cache_file = fullfile(cache_dir, [cache_key '.mat']);
     if exist(cache_file, 'file')
         try
@@ -72,6 +76,12 @@ function [clusters] = permCluster(data1, data2, n_perm, n_perm_clust_tests)
     p_vals = [];
     if ~isempty(sizes)
         p_vals = 1 - invprctile(clusters_dist, abs(sizes))/100;
+        % Enforce strict Monte Carlo positive lower bound when observed cluster exceeds all permutations
+        for k = 1:numel(p_vals)
+            if p_vals(k) <= 0
+                p_vals(k) = (sum(clusters_dist >= abs(sizes(k))) + 1) / (numel(clusters_dist) + 1);
+            end
+        end
     end
     % Average Cohen's dz for each cluster.
     cohens_dz = getCohensDz(t_values, size(data1,2), starts, ends);

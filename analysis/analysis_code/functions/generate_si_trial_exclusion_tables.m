@@ -1,4 +1,4 @@
-function [counts_tbl, pct_tbl] = generate_si_trial_exclusion_tables(procFolder, good_subs, all_subs, out_stats_dir)
+function [counts_tbl, pct_tbl] = generate_si_trial_exclusion_tables(procFolder, good_subs, all_subs)
 % GENERATE_SI_TRIAL_EXCLUSION_TABLES Generates comprehensive trial exclusion tables
 % for the Supplementary Information detailing trial counts and percentages for each
 % exclusion criterion across all 42 tested participants (both valid and excluded).
@@ -15,9 +15,6 @@ function [counts_tbl, pct_tbl] = generate_si_trial_exclusion_tables(procFolder, 
     end
     if nargin < 3 || isempty(all_subs)
         all_subs = [47, 49:85, 87:90]; % N=42
-    end
-    if nargin < 4 || isempty(out_stats_dir)
-        out_stats_dir = '../statistics';
     end
 
     bt_file = fullfile(procFolder, 'bad_trials_day2_target_x_to_subs_47_49-85_87-90.mat');
@@ -197,12 +194,4 @@ function [counts_tbl, pct_tbl] = generate_si_trial_exclusion_tables(procFolder, 
     pct_tbl = array2table([pct_mat; summary_mat_pct], 'VariableNames', strcat(all_col_names, '_Pct'));
     pct_tbl = addvars(pct_tbl, [group_status; summary_status_pct], 'Before', 1, 'NewVariableNames', 'Group_Status');
     pct_tbl = addvars(pct_tbl, [participant_ids; summary_ids_pct], 'Before', 1, 'NewVariableNames', 'Participant');
-
-    % Save Standalone CSVs
-    if ~exist(out_stats_dir, 'dir')
-        mkdir(out_stats_dir);
-    end
-    writetable(counts_tbl, fullfile(out_stats_dir, 'SI_Exclusion_All_Subs_Counts.csv'));
-    writetable(pct_tbl, fullfile(out_stats_dir, 'SI_Exclusion_All_Subs_Pct.csv'));
-    fprintf('Saved SI trial exclusion tables to %s (CSVs generated).\n', out_stats_dir);
 end

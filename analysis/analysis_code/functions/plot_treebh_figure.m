@@ -1,15 +1,8 @@
 function [fig_handle] = plot_treebh_figure(G_output, title_str, save_path_base, highlight_posthoc, target_ax, show_legend)
 % PLOT_TREEBH_FIGURE Generates publication-ready vector figures for TreeBH trees
 % Uses a bottom-aligned leaf layout so all leaf hypotheses sit on a single bottom row
-% and internal/leaf labels never collide with branches, displaying p, q, and alpha on nodes.
-%
-% Inputs:
-%   G_output          - Digraph output returned by treeBH.m
-%   title_str         - Title string for the figure/panel
-%   save_path_base    - Base file path (without extension) for saving .fig, .png, .svg ('' to skip)
-%   highlight_posthoc - Boolean: if true, highlights the Post-Hoc branch in vivid orange/peach
-%   target_ax         - Optional existing axes handle (for multi-panel figures such as Figure S2)
-%   show_legend       - Optional boolean (default true)
+% and internal/leaf labels never collide with branches, displaying <=3-decimal stats
+% without leading zeros (and <.001 for values < 0.001) in large Calibri typography.
 
 if nargin < 4 || isempty(highlight_posthoc)
     highlight_posthoc = false;
@@ -21,13 +14,22 @@ if nargin < 6 || isempty(show_legend)
     show_legend = true;
 end
 
+plt_draft = get_draft_plt_params();
+font_name = plt_draft.font_name;
+
 is_multipanel = ~isempty(target_ax);
 if ~is_multipanel
-    fig_handle = figure('Name', title_str, 'Color', 'w', 'Position', [50, 50, 1620, 880]);
-    ax = axes('Parent', fig_handle);
+    fig_handle = figure('Name', title_str, 'Color', 'w', 'Position', [30, 40, 1320, 740], 'Visible', 'off');
+    ax = axes('Parent', fig_handle, 'Position', [0.02, 0.06, 0.96, 0.87]);
 else
     ax = target_ax;
     fig_handle = ancestor(ax, 'figure');
+    ax_orig_units = ax.Units;
+    ax.Units = 'normalized';
+    ax_p = ax.Position;
+    ax.Units = ax_orig_units;
+    % Treat standalone full-canvas axes (e.g. Fig. S1a-e) at full-page typography scale
+    is_multipanel = (ax_p(3) < 0.80 || ax_p(4) < 0.75);
 end
 hold(ax, 'on');
 
@@ -60,8 +62,9 @@ for i = 1:num_nodes
     end
 end
 
-% Compute clean bottom-aligned hierarchical coordinates
-[x_coords, y_coords, H] = compute_bottom_aligned_tree_coords(G_output);
+% Compute clean bottom-aligned hierarchical coordinates with wider spacing for large fonts
+[x_coords, y_coords, H, root_idx] = compute_bottom_aligned_tree_coords(G_output);
+root_x = x_coords(root_idx);
 
 % Plot tree graph without MATLAB's single-line auto-labels
 p_graph = plot(ax, G_output, ...
@@ -69,9 +72,9 @@ p_graph = plot(ax, G_output, ...
     'YData', y_coords, ...
     'NodeLabel', {}, ...
     'NodeColor', node_colors, ...
-    'MarkerSize', 12, ...
-    'LineWidth', 1.8, ...
-    'ArrowSize', 8, ...
+    'MarkerSize', 14, ...
+    'LineWidth', 2.2, ...
+    'ArrowSize', 10, ...
     'EdgeColor', [0.55, 0.55, 0.55]);
 
 % Highlight Post-Hoc edges when enabled
@@ -81,22 +84,26 @@ if highlight_posthoc
         source_idx = edge_table.EndNodes(e, 1);
         target_idx = edge_table.EndNodes(e, 2);
         if is_posthoc(target_idx)
-            highlight(p_graph, source_idx, target_idx, 'EdgeColor', [0.90, 0.45, 0.00], 'LineWidth', 2.6);
+            highlight(p_graph, source_idx, target_idx, 'EdgeColor', [0.90, 0.45, 0.00], 'LineWidth', 3.0);
         end
     end
 end
 
-% Overlay unclipped node circles so GraphPlot internal edge-highlight bounds never flatten rightmost marker
-scatter(ax, x_coords, y_coords, 135, node_colors, 'filled', ...
+% Overlay unclipped node circles
+scatter(ax, x_coords, y_coords, 210, node_colors, 'filled', ...
     'Clipping', 'off', 'HandleVisibility', 'off');
 
-% Render crisp multi-line text labels with collision-free quadrant placement
+% Standardize typography to Fig. 3 full-page scale
 if is_multipanel
-    internal_fs = 8.2;
-    leaf_fs     = 7.8;
+    internal_fs = 11.5;
+    leaf_fs     = 10.5;
+    ttl_fs      = 15.0;
+    leg_fs      = 12.0;
 else
-    internal_fs = 8.8;
-    leaf_fs     = 8.3;
+    internal_fs = 13.0;
+    leaf_fs     = 12.2;
+    ttl_fs      = 16.0;
+    leg_fs      = 13.0;
 end
 
 has_alpha_col = ismember('alpha', G_output.Nodes.Properties.VariableNames);
@@ -116,31 +123,35 @@ for i = 1:num_nodes
             if isnan(raw_p)
                 stat_line = '(Pruned)';
             elseif has_alpha_col && ~isnan(G_output.Nodes.alpha(i))
-                stat_line = sprintf('[p=%.4f, q=%.4f, \\alpha=%.4f]', raw_p, adj_p, G_output.Nodes.alpha(i));
+                a_str = fmt_tree_stat('α', G_output.Nodes.alpha(i)); % fallback replaced below for tex
+                a_str = strrep(a_str, 'α', '\alpha');
+                stat_line = sprintf('[%s, %s, %s]', fmt_tree_stat('p', raw_p), fmt_tree_stat('q', adj_p), a_str);
             else
-                stat_line = sprintf('[p=%.4f, q=%.4f]', raw_p, adj_p);
+                stat_line = sprintf('[%s, %s]', fmt_tree_stat('p', raw_p), fmt_tree_stat('q', adj_p));
             end
             lbl_str = sprintf('{\\bf%s}\n%s', disp_name, stat_line);
         else
             lbl_str = sprintf('{\\bf%s}', disp_name);
         end
 
-        text(ax, x_coords(i) - 0.05, y_coords(i) - 0.13, lbl_str, ...
-            'Rotation', -30, ...
+        text(ax, x_coords(i) - 0.08, y_coords(i) - 0.14, lbl_str, ...
+            'Rotation', -32, ...
             'HorizontalAlignment', 'left', ...
             'VerticalAlignment', 'top', ...
             'FontSize', leaf_fs, ...
-            'FontName', 'Arial', ...
-            'Color', [0.12, 0.12, 0.12], ...
+            'FontName', font_name, ...
+            'Color', [0.10, 0.10, 0.10], ...
             'Interpreter', 'tex');
     else
         % Internal family node
         if has_stats
             adj_p = G_output.Nodes.corr_p(i);
+            q_part = fmt_tree_stat('q_{FDR}', adj_p);
             if has_alpha_col && ~isnan(G_output.Nodes.alpha(i))
-                q_str = sprintf('(q_{FDR}=%.4f, \\alpha=%.4f)', adj_p, G_output.Nodes.alpha(i));
+                a_part = fmt_tree_stat('\alpha', G_output.Nodes.alpha(i));
+                q_str = sprintf('(%s, %s)', q_part, a_part);
             else
-                q_str = sprintf('(q_{FDR}=%.4f)', adj_p);
+                q_str = sprintf('(%s)', q_part);
             end
         else
             q_str = '';
@@ -152,46 +163,65 @@ for i = 1:num_nodes
             text(ax, x_coords(i), y_coords(i) + 0.16, lbl_str, ...
                 'HorizontalAlignment', 'center', ...
                 'VerticalAlignment', 'bottom', ...
-                'FontSize', internal_fs + 0.5, ...
-                'FontName', 'Arial', ...
-                'Color', [0.10, 0.10, 0.10], ...
+                'FontSize', internal_fs + 1.0, ...
+                'FontName', font_name, ...
+                'Color', [0.08, 0.08, 0.08], ...
                 'Interpreter', 'tex');
         elseif numel(kids) == 1
-            % Vertical single-child chain node: place 2-line label cleanly to the right
+            % Place extreme-left chain labels left; place interior left-branch chain labels right below incoming edge
             lbl_str = sprintf('{\\bf%s}\n%s', disp_name, q_str);
-            text(ax, x_coords(i) + 0.20, y_coords(i) - 0.03, lbl_str, ...
-                'HorizontalAlignment', 'left', ...
-                'VerticalAlignment', 'top', ...
-                'FontSize', internal_fs, ...
-                'FontName', 'Arial', ...
-                'Color', [0.12, 0.12, 0.12], ...
-                'Interpreter', 'tex');
+            min_x = min(x_coords);
+            if x_coords(i) <= min_x + 0.50
+                text(ax, x_coords(i) - 0.22, y_coords(i) - 0.02, lbl_str, ...
+                    'HorizontalAlignment', 'right', ...
+                    'VerticalAlignment', 'middle', ...
+                    'FontSize', internal_fs, ...
+                    'FontName', font_name, ...
+                    'Color', [0.10, 0.10, 0.10], ...
+                    'Interpreter', 'tex');
+            elseif x_coords(i) < root_x
+                text(ax, x_coords(i) + 0.22, y_coords(i) - 0.10, lbl_str, ...
+                    'HorizontalAlignment', 'left', ...
+                    'VerticalAlignment', 'top', ...
+                    'FontSize', internal_fs, ...
+                    'FontName', font_name, ...
+                    'Color', [0.10, 0.10, 0.10], ...
+                    'Interpreter', 'tex');
+            else
+                text(ax, x_coords(i) + 0.22, y_coords(i) - 0.02, lbl_str, ...
+                    'HorizontalAlignment', 'left', ...
+                    'VerticalAlignment', 'middle', ...
+                    'FontSize', internal_fs, ...
+                    'FontName', font_name, ...
+                    'Color', [0.10, 0.10, 0.10], ...
+                    'Interpreter', 'tex');
+            end
         else
             % Branching internal node: place in upper quadrant opposite the incoming parent edge
             p_idx = preds(1);
             lbl_str = sprintf('{\\bf%s}\n%s', disp_name, q_str);
             if x_coords(p_idx) <= x_coords(i)
-                text(ax, x_coords(i) + 0.18, y_coords(i) + 0.06, lbl_str, ...
+                text(ax, x_coords(i) + 0.20, y_coords(i) + 0.06, lbl_str, ...
                     'HorizontalAlignment', 'left', ...
                     'VerticalAlignment', 'bottom', ...
                     'FontSize', internal_fs, ...
-                    'FontName', 'Arial', ...
-                    'Color', [0.12, 0.12, 0.12], ...
+                    'FontName', font_name, ...
+                    'Color', [0.10, 0.10, 0.10], ...
                     'Interpreter', 'tex');
             else
-                text(ax, x_coords(i) - 0.18, y_coords(i) + 0.06, lbl_str, ...
+                text(ax, x_coords(i) - 0.20, y_coords(i) + 0.06, lbl_str, ...
                     'HorizontalAlignment', 'right', ...
                     'VerticalAlignment', 'bottom', ...
                     'FontSize', internal_fs, ...
-                    'FontName', 'Arial', ...
-                    'Color', [0.12, 0.12, 0.12], ...
+                    'FontName', font_name, ...
+                    'Color', [0.10, 0.10, 0.10], ...
                     'Interpreter', 'tex');
             end
         end
     end
 end
 
-title(ax, title_str, 'FontSize', 13, 'FontWeight', 'bold', 'Interpreter', 'none');
+title(ax, title_str, 'FontSize', ttl_fs, 'FontWeight', 'bold', 'FontName', font_name, 'Interpreter', 'none');
 axis(ax, 'off');
 
 % Add Custom Legend
@@ -200,65 +230,74 @@ if show_legend
     h_leg = [];
     l_labels = {};
 
-    h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.12, 0.53, 0.90], 'MarkerEdgeColor', 'k', 'MarkerSize', 9);
+    h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.12, 0.53, 0.90], 'MarkerEdgeColor', 'k', 'MarkerSize', 11);
     l_labels{end+1} = 'Pre-Reg Significant (TreeBH FDR)';
 
-    h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.65, 0.65, 0.65], 'MarkerEdgeColor', 'k', 'MarkerSize', 9);
+    h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.65, 0.65, 0.65], 'MarkerEdgeColor', 'k', 'MarkerSize', 11);
     l_labels{end+1} = 'Pre-Reg Non-Significant';
 
     if highlight_posthoc
-        h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.90, 0.45, 0.00], 'MarkerEdgeColor', 'k', 'MarkerSize', 9);
+        h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.90, 0.45, 0.00], 'MarkerEdgeColor', 'k', 'MarkerSize', 11);
         l_labels{end+1} = 'Post-Hoc Significant (TreeBH FDR)';
 
-        h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.95, 0.75, 0.50], 'MarkerEdgeColor', 'k', 'MarkerSize', 9);
+        h_leg(end+1) = plot(ax, NaN, NaN, 'o', 'MarkerFaceColor', [0.95, 0.75, 0.50], 'MarkerEdgeColor', 'k', 'MarkerSize', 11);
         l_labels{end+1} = 'Post-Hoc Non-Significant';
     end
 
-    legend(ax, h_leg, l_labels, 'Location', 'southoutside', 'Orientation', 'horizontal', 'Box', 'off', 'FontSize', 9.5);
+    legend(ax, h_leg, l_labels, 'Location', 'southoutside', 'Orientation', 'horizontal', ...
+        'Box', 'off', 'FontSize', leg_fs, 'FontName', font_name);
 end
 
-% Anchor data bounding box with an invisible line so exportgraphics tight-limit pass never clips edge markers
-plot(ax, [min(x_coords) - 0.80, max(x_coords) + 3.30], [1.0 - 1.50, H + 0.55], ...
-    'LineStyle', 'none', 'Marker', 'none', 'HandleVisibility', 'off');
+% Bounding box calibrated for compact leaf spacing and full unclipped rotated leaf labels
+x_lo = min(x_coords) - 2.65;
+x_hi = max(x_coords) + 3.90;
+y_lo = 1.0 - 2.65;
+y_hi = H + 0.65;
+
+plot(ax, [x_lo, x_hi], [y_lo, y_hi], 'LineStyle', 'none', 'Marker', 'none', 'HandleVisibility', 'off');
 ax.DataAspectRatioMode = 'auto';
 ax.PlotBoxAspectRatioMode = 'auto';
-xlim(ax, [min(x_coords) - 0.80, max(x_coords) + 3.30]);
-ylim(ax, [1.0 - 1.50, H + 0.55]);
+xlim(ax, [x_lo, x_hi]);
+ylim(ax, [y_lo, y_hi]);
 
-% Save outputs if save_path_base provided
 if ~isempty(save_path_base)
     [parent_dir, ~, ~] = fileparts(save_path_base);
     if ~exist(parent_dir, 'dir')
         mkdir(parent_dir);
     end
-
     try
         savefig(fig_handle, [save_path_base, '.fig']);
     catch ME
         warning('Could not save .fig for %s: %s', save_path_base, ME.message);
     end
-
     try
         exportgraphics(fig_handle, [save_path_base, '.png'], 'Resolution', 300);
     catch ME
-        warning('exportgraphics failed for %s: %s. Falling back to print...', save_path_base, ME.message);
-        try
-            print(fig_handle, [save_path_base, '.png'], '-dpng', '-r300');
-        catch ME2
-            warning('Fallback print failed for %s: %s', save_path_base, ME2.message);
+        warning('exportgraphics failed for %s: %s', save_path_base, ME.message);
+    end
+end
+
+end
+
+function out = fmt_tree_stat(name_str, val)
+% Formats p, q, or alpha to <=3 decimal places without leading zero, and <.001 for < 0.001.
+    if val < 0.001
+        out = [name_str, '<.001'];
+    else
+        r = round(val, 3);
+        if r >= 1
+            s = '1';
+        else
+            s = sprintf('%.3f', r);
+            s = regexprep(s, '(\.\d*?)0+$', '$1');
+            s = regexprep(s, '\.$', '');
+            s = regexprep(s, '^0\.', '.');
         end
-    end
-
-    try
-        exportgraphics(fig_handle, [save_path_base, '.svg'], 'ContentType', 'vector');
-    catch ME
-        warning('Could not save .svg for %s: %s', save_path_base, ME.message);
+        out = [name_str, '=', s];
     end
 end
 
-end
-
-function [x_coords, y_coords, H] = compute_bottom_aligned_tree_coords(G)
+function [x_coords, y_coords, H, root_idx] = compute_bottom_aligned_tree_coords(G)
     n = G.numnodes;
     root_idx = find(indegree(G) == 0, 1);
     if isempty(root_idx)
@@ -299,10 +338,10 @@ function [x_coords, state] = dfs_assign_x(G, u, parent_idx, x_coords, state)
         if state.prev_parent == -1
             x_coords(u) = state.cur_x;
         elseif state.prev_parent == parent_idx
-            state.cur_x = state.cur_x + 1.40;
+            state.cur_x = state.cur_x + 1.15;
             x_coords(u) = state.cur_x;
         else
-            state.cur_x = state.cur_x + 2.55;
+            state.cur_x = state.cur_x + 1.98;
             x_coords(u) = state.cur_x;
         end
         state.prev_parent = parent_idx;
@@ -328,6 +367,44 @@ function [disp_name] = format_tree_node_name(raw_name)
             disp_name = 'Exploratory (Reach)';
         case 'Sensitivity_Advantage'
             disp_name = 'Sensitivity Advantage';
+        case 'Keyboard_RT'
+            disp_name = 'Keyboard RT';
+        case 'Reach_Area'
+            disp_name = 'Reach Area';
+        case 'Reaching_Onset'
+            disp_name = 'Reaching Onset';
+        case 'Reaching_Duration_MT'
+            disp_name = 'Reaching Duration';
+        case 'Total_Distance'
+            disp_name = 'Distance Traveled';
+        case 'Changes_of_Mind_COM'
+            disp_name = 'COM';
+        case 'Spatial_Deviation_Cluster'
+            disp_name = 'Deviance From Center';
+        case 'Spatial_Variation_Cluster'
+            disp_name = 'Horiz. Mvmnt Variation';
+        case 'Implied_End_Point_Cluster'
+            disp_name = 'Implied Endpoint';
+        case 'Reach_Area_vs_KB'
+            disp_name = 'Reach Area vs. KB';
+        case 'Onset_vs_KB'
+            disp_name = 'Reaching Onset vs. KB';
+        case 'MT_vs_KB'
+            disp_name = 'Reaching Duration vs. KB';
+        case 'Total_Dist_vs_KB'
+            disp_name = 'Distance Traveled vs. KB';
+        case 'COM_vs_KB'
+            disp_name = 'COM vs. KB';
+        case 'Spatial_Dev_vs_KB'
+            disp_name = 'Deviance From Center vs. KB';
+        case 'Spatial_Var_vs_KB'
+            disp_name = 'Horiz. Mvmnt Var. vs. KB';
+        case 'MAD_vs_KB'
+            disp_name = 'MAD vs. KB';
+        case 'AUC_vs_KB'
+            disp_name = 'AUC vs. KB';
+        case 'IEP_vs_KB'
+            disp_name = 'Implied Endpoint vs. KB';
         otherwise
             disp_name = strrep(raw_name, '_', ' ');
     end

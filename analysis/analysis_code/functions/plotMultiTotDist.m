@@ -12,15 +12,17 @@ function [outStats] = plotMultiTotDist(traj_names, plt_p, p,plotFlag)
         reach_avg_each = load([p.PROC_DATA_FOLDER '/avg_each_' p.DAY '_' traj_names{iTraj}{1} '_subs_' p.SUBS_STRING '.mat']);  reach_avg_each = reach_avg_each.reach_avg_each;
         hold on;
 
-        % Convert to cm.
-        reach_avg_each(iTraj).tot_dist.con = reach_avg_each(iTraj).tot_dist.con * 100;
-        reach_avg_each(iTraj).tot_dist.incon = reach_avg_each(iTraj).tot_dist.incon * 100;
-        reach_avg_each(iTraj).tot_dist.con_left = reach_avg_each(iTraj).tot_dist.con_left * 100;
-        reach_avg_each(iTraj).tot_dist.con_right = reach_avg_each(iTraj).tot_dist.con_right * 100;
-        reach_avg_each(iTraj).tot_dist.incon_left = reach_avg_each(iTraj).tot_dist.incon_left * 100;
-        reach_avg_each(iTraj).tot_dist.incon_right = reach_avg_each(iTraj).tot_dist.incon_right * 100;
-        if isfield(reach_avg_each(iTraj).tot_dist, 'total')
-            reach_avg_each(iTraj).tot_dist.total = reach_avg_each(iTraj).tot_dist.total * 100;
+        % Convert to cm only when working in physical meters (not within-subject z-scored).
+        if ~isfield(p, 'NORMALIZE_WITHIN_SUB') || ~p.NORMALIZE_WITHIN_SUB
+            reach_avg_each(iTraj).tot_dist.con = reach_avg_each(iTraj).tot_dist.con * 100;
+            reach_avg_each(iTraj).tot_dist.incon = reach_avg_each(iTraj).tot_dist.incon * 100;
+            reach_avg_each(iTraj).tot_dist.con_left = reach_avg_each(iTraj).tot_dist.con_left * 100;
+            reach_avg_each(iTraj).tot_dist.con_right = reach_avg_each(iTraj).tot_dist.con_right * 100;
+            reach_avg_each(iTraj).tot_dist.incon_left = reach_avg_each(iTraj).tot_dist.incon_left * 100;
+            reach_avg_each(iTraj).tot_dist.incon_right = reach_avg_each(iTraj).tot_dist.incon_right * 100;
+            if isfield(reach_avg_each(iTraj).tot_dist, 'total')
+                reach_avg_each(iTraj).tot_dist.total = reach_avg_each(iTraj).tot_dist.total * 100;
+            end
         end
 
         if(plotFlag)

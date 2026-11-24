@@ -1,4 +1,4 @@
-function [pas_summary_table, pas_by_sub_table, pas_stats_table, kb_PAS_Pct_Table, reach_PAS_Pct_Table] = compute_pas_analyses(reach_avg_each, keyboard_avg_each, good_subs, out_stats_dir)
+function [pas_summary_table, pas_by_sub_table, pas_stats_table, kb_PAS_Pct_Table, reach_PAS_Pct_Table] = compute_pas_analyses(reach_avg_each, keyboard_avg_each, good_subs)
 % COMPUTE_PAS_ANALYSES Analyzes perceptual awareness scores (PAS 1-4) by Task and Congruency
 %
 % Computes:
@@ -11,7 +11,6 @@ function [pas_summary_table, pas_by_sub_table, pas_stats_table, kb_PAS_Pct_Table
         reach_avg_each struct
         keyboard_avg_each struct
         good_subs double
-        out_stats_dir char = '../statistics'
     end
 
     n_subs = numel(good_subs);
@@ -241,13 +240,4 @@ function [pas_summary_table, pas_by_sub_table, pas_stats_table, kb_PAS_Pct_Table
         'PAS_1_Incon_Pct', 'PAS_2_Incon_Pct', 'PAS_3_Incon_Pct', 'PAS_4_Incon_Pct', ...
         'Mean_PAS_Total', 'Mean_PAS_Con', 'Mean_PAS_Incon', ...
         'Obj_PAS1_Incon_Percent', 'Obj_PAS1_Con_Percent'});
-
-    %% 5. Save Standalone CSVs
-    if ~exist(out_stats_dir, 'dir')
-        mkdir(out_stats_dir);
-    end
-    writetable(pas_summary_table, fullfile(out_stats_dir, 'Table_2_PAS_Summary.csv'));
-    writetable(pas_stats_table, fullfile(out_stats_dir, 'Table_2_PAS_Statistical_Tests.csv'));
-    writetable(pas_by_sub_table, fullfile(out_stats_dir, 'Table_2_PAS_By_Sub.csv'));
-    fprintf('Saved PAS summary, statistical tests, and by-sub CSVs to %s\n', out_stats_dir);
 end

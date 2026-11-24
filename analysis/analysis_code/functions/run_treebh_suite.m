@@ -1,5 +1,6 @@
-function [full_stats_tables, tree_figs] = run_treebh_suite(full_stats_tables, within_tbl, fig_output_folder)
+function [full_stats_tables] = run_treebh_suite(full_stats_tables, within_tbl)
 % RUN_TREEBH_SUITE Executes the complete multiple-comparisons architecture
+% in memory without writing intermediate figures to disk.
 %
 % Implements:
 %   - Tree 1: Congruency Effect Analysis (TrajNorm_noStandardization)
@@ -7,18 +8,8 @@ function [full_stats_tables, tree_figs] = run_treebh_suite(full_stats_tables, wi
 %   - Figure S1: Original Pre-Registered Congruency Effect Analysis (TrajNorm_noStandardization)
 %   - Figure S2 (a): Robustness Test of Tree 1 (TrajNorm_Standardization)
 %   - Figure S2 (b): Robustness Test of Tree 2 (TrajNorm_Standardization)
-%   - Combined Figure S2: Stacked 2-panel (a) & (b) figure
 %   - Chronological Trajectory Dynamics (noTrajNorm_noStandardization, Components 4 & 6)
 
-if nargin < 3 || isempty(fig_output_folder)
-    fig_output_folder = '../figures/TreeBH';
-end
-
-if ~exist(fig_output_folder, 'dir')
-    mkdir(fig_output_folder);
-end
-
-tree_figs = struct();
 alpha_level = 0.05;
 
 %% 1. Tree 1: Congruency Effect Analysis (TrajNorm_noStandardization)
@@ -27,11 +18,6 @@ fprintf('Running Tree 1: Congruency Effect Analysis (TrajNorm_noStandardization)
 fprintf('======================================================\n');
 [G1, ~] = build_tree_graph('Tree1_Main', full_stats_tables);
 [G1_out, ~] = treeBH(G1, 0, 0, 1, alpha_level);
-
-fig1_path = fullfile(fig_output_folder, 'Tree_1_Congruency');
-tree_figs.Tree_1 = plot_treebh_figure(G1_out, ...
-    'Tree 1: Congruency Effect Analysis (TrajNorm_noStandardization)', fig1_path, true);
-
 tbl_tree1 = extract_tree_table(G1_out);
 disp(tbl_tree1);
 
@@ -41,11 +27,6 @@ fprintf('Running Tree 2: Sensitivity Analysis (TrajNorm_noStandardization)\n');
 fprintf('======================================================\n');
 [G2, ~] = build_tree_graph('Tree2_Sensitivity', full_stats_tables, within_tbl);
 [G2_out, ~] = treeBH(G2, 0, 0, 1, alpha_level);
-
-fig2_path = fullfile(fig_output_folder, 'Tree_2_Sensitivity');
-tree_figs.Tree_2 = plot_treebh_figure(G2_out, ...
-    'Tree 2: Sensitivity Analysis vs. Keyboard RT (TrajNorm_noStandardization)', fig2_path, true);
-
 tbl_tree2 = extract_tree_table(G2_out);
 disp(tbl_tree2);
 
@@ -55,11 +36,6 @@ fprintf('Running Figure S1: Original Pre-Registered Congruency Tree\n');
 fprintf('======================================================\n');
 [GS1, ~] = build_tree_graph('TreeS1_Original', full_stats_tables);
 [GS1_out, ~] = treeBH(GS1, 0, 0, 1, alpha_level);
-
-figS1_path = fullfile(fig_output_folder, 'Figure_S1');
-tree_figs.Figure_S1 = plot_treebh_figure(GS1_out, ...
-    'Figure S1: Original Pre-Registered Congruency Effect Analysis (TrajNorm_noStandardization)', figS1_path, false);
-
 tbl_figS1 = extract_tree_table(GS1_out);
 disp(tbl_figS1);
 
@@ -69,11 +45,6 @@ fprintf('Running Figure S2 (a): Congruency Robustness Tree (TrajNorm_Standardiza
 fprintf('======================================================\n');
 [GS2a, ~] = build_tree_graph('TreeS2_Standard', full_stats_tables);
 [GS2a_out, ~] = treeBH(GS2a, 0, 0, 1, alpha_level);
-
-figS2a_path = fullfile(fig_output_folder, 'Figure_S2a');
-tree_figs.Figure_S2a = plot_treebh_figure(GS2a_out, ...
-    'Figure S2 (a): Congruency Effect Robustness Analysis (TrajNorm_Standardization)', figS2a_path, true);
-
 tbl_figS2a = extract_tree_table(GS2a_out);
 disp(tbl_figS2a);
 
@@ -83,39 +54,8 @@ fprintf('Running Figure S2 (b): Sensitivity Robustness Tree (TrajNorm_Standardiz
 fprintf('======================================================\n');
 [GS2b, ~] = build_tree_graph('TreeSI2_Standard', full_stats_tables, within_tbl);
 [GS2b_out, ~] = treeBH(GS2b, 0, 0, 1, alpha_level);
-
-figS2b_path = fullfile(fig_output_folder, 'Figure_S2b');
-tree_figs.Figure_S2b = plot_treebh_figure(GS2b_out, ...
-    'Figure S2 (b): Sensitivity Robustness Analysis vs. Keyboard RT (TrajNorm_Standardization)', figS2b_path, true);
-
 tbl_figS2b = extract_tree_table(GS2b_out);
 disp(tbl_figS2b);
-
-%% 6. Combined 2-Panel Figure S2 ((a) stacked above (b))
-fig_s2_comb = figure('Name', 'Figure S2: Standardized Robustness Trees', ...
-    'Color', 'w', 'Position', [60, 40, 1500, 1450]);
-tl_s2 = tiledlayout(fig_s2_comb, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
-
-ax_s2a = nexttile(tl_s2, 1);
-plot_treebh_figure(GS2a_out, ...
-    '(a) Congruency Effect Robustness Analysis (TrajNorm_Standardization)', '', true, ax_s2a, false);
-
-ax_s2b = nexttile(tl_s2, 2);
-plot_treebh_figure(GS2b_out, ...
-    '(b) Sensitivity Robustness Analysis vs. Keyboard RT (TrajNorm_Standardization)', '', true, ax_s2b, true);
-
-figS2_comb_path = fullfile(fig_output_folder, 'Figure_S2');
-try, savefig(fig_s2_comb, [figS2_comb_path, '.fig']); catch, end
-try
-    exportgraphics(fig_s2_comb, [figS2_comb_path, '.png'], 'Resolution', 300);
-catch
-    print(fig_s2_comb, [figS2_comb_path, '.png'], '-dpng', '-r300');
-end
-try
-    exportgraphics(fig_s2_comb, [figS2_comb_path, '.svg'], 'ContentType', 'vector');
-catch
-end
-tree_figs.Figure_S2 = fig_s2_comb;
 
 %% 7. Populate p_Val_TreeBH_Corrected in analyzed_stats_tables & fullTrajAnalysis
 newColName = 'p_Val_TreeBH_Corrected';
@@ -219,7 +159,7 @@ full_stats_tables.TreeBH_Results.Graphs.GS1_out  = GS1_out;
 full_stats_tables.TreeBH_Results.Graphs.GS2a_out = GS2a_out;
 full_stats_tables.TreeBH_Results.Graphs.GS2b_out = GS2b_out;
 
-fprintf('\nAll TreeBH analyses and figures completed successfully!\n');
+fprintf('\nAll TreeBH analyses completed in memory successfully!\n');
 
 end
 

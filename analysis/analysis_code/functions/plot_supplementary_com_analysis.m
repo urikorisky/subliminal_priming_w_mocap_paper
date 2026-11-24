@@ -1,46 +1,19 @@
-function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, data_dir, stats_dir)
-%PLOT_SUPPLEMENTARY_COM_ANALYSIS Produces the Supplementary Information (SI)
-% figures and statistics for the Change of Mind (COM) dwell time and debouncing threshold analysis.
-%
-% This function performs:
-% 1. Subject-adjusted dwell time distribution analysis (physical milliseconds per participant),
-%    showing the sharp noise component (< 80 ms) vs. sustained motor corrections (>= 80 ms).
-% 2. Parameter sweep across normalized sample thresholds (1 to 20 samples, 0.5% to 10% reach),
-%    including the pre-registered raw COM baseline for reference,
-%    AND reporting both Correct and Incorrect trials across the sweep.
-% 3. Neuro-motor physical millisecond thresholds (10 ms, 25 ms, 50 ms, and 80 ms motor correction minimum),
-%    reporting simple effects / p-values of Incongruent vs. Congruent split by Correctness.
-%
-% Outputs:
-% - SuppFig_COM_1_Dwell_Distributions (.png, .fig, .pdf)
-% - SuppFig_COM_2_Threshold_Sweep (.png, .fig, .pdf)
-% - SuppFig_COM_3_Physical_Thresholds (.png, .fig, .pdf)
-% - Supplementary_COM_Threshold_Stats.xlsx & .csv
+function [Stats_Table] = plot_supplementary_com_analysis(data_dir)
+%PLOT_SUPPLEMENTARY_COM_ANALYSIS Computes the Supplementary Information (SI)
+% Change of Mind (COM) dwell-time and debouncing threshold sweep statistics
+% across normalized sample thresholds and physical millisecond thresholds.
 %
 % Author: Antigravity / Uri
 
     func_dir = fileparts(mfilename('fullpath'));
     repo_root = fullfile(func_dir, '..', '..');
-    if nargin < 1 || isempty(save_dir)
-        save_dir = fullfile(repo_root, 'figures', 'Supplementary_COM');
-    end
-    if ~exist(save_dir, 'dir')
-        mkdir(save_dir);
-    end
 
     % Locate latest acceleration-corrected processed TrajNorm data
-    if nargin < 2 || isempty(data_dir)
+    if nargin < 1 || isempty(data_dir)
         data_dir = fullfile(repo_root, 'processed_data', 'nonStandardized_TrajNorm');
         if ~exist(data_dir, 'dir')
             data_dir = fullfile(repo_root, 'processed_data', 'standardized_TrajNorm');
         end
-    end
-
-    if nargin < 3 || isempty(stats_dir)
-        stats_dir = fullfile(repo_root, 'statistics');
-    end
-    if ~exist(stats_dir, 'dir')
-        mkdir(stats_dir);
     end
 
     good_subs_file = dir(fullfile(data_dir, 'good_subs_*.mat'));
@@ -56,13 +29,6 @@ function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, 
 
     n_subs = length(good_subs);
     fprintf('=== Running Supplementary COM Analysis across %d subjects ===\n', n_subs);
-
-    % Color palette matching manuscript
-    c_blue   = [0.12, 0.47, 0.71]; % Congruent
-    c_red    = [0.84, 0.15, 0.16]; % Incongruent
-    c_purple = [0.49, 0.18, 0.56]; % Effect size
-    c_orange = [0.85, 0.33, 0.10]; % Dwell noise / p-values
-    c_gray   = [0.40, 0.40, 0.40];
 
     %% ---------------------------------------------------------------------
     %% 1. EXTRACT DATA & INDIVIDUAL TRIAL DURATIONS
@@ -147,57 +113,7 @@ function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, 
         end
     end
 
-    dwell_tbl = struct2table(all_dwell_events);
-    fprintf('Extracted %d total COM events across %d valid trials.\n', height(dwell_tbl), length(trial_data));
-
-    %% =====================================================================
-    %% FIGURE S1: SUBJECT-ADJUSTED DWELL TIME DISTRIBUTION (PHYSICAL MS)
-    %% =====================================================================
-    fig1 = figure('Name', 'SuppFig COM 1 - Dwell Time Distribution', 'Position', [100, 100, 1100, 500], 'Color', 'w');
-    
-    % Panel A: Millisecond dwell histogram with zoom-in
-    ax1 = subplot(1, 2, 1);
-    hold(ax1, 'on');
-    h_all = histogram(ax1, dwell_tbl.dwell_ms, 0:15:500, 'FaceColor', c_blue, 'EdgeColor', 'w', 'FaceAlpha', 0.85);
-    xline(ax1, 80, '--r', '80 ms (Neuro-motor Limit)', 'LineWidth', 2, 'FontSize', 10, 'LabelVerticalAlignment', 'top');
-    xline(ax1, 50, ':k', '50 ms', 'LineWidth', 1.5, 'FontSize', 9);
-    xlabel(ax1, 'Dwell Time per COM (Milliseconds)', 'FontSize', 11, 'FontWeight', 'bold');
-    ylabel(ax1, 'Number of COM Events', 'FontSize', 11, 'FontWeight', 'bold');
-    title(ax1, 'A. Overall Dwell Distribution (Adjusted by Subject MD)', 'FontSize', 12, 'FontWeight', 'bold');
-    grid(ax1, 'on');
-    set(ax1, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off');
-
-    % Inset on sub-100 ms region
-    ax_ins = axes('Position', [0.27, 0.45, 0.18, 0.42]);
-    hold(ax_ins, 'on');
-    histogram(ax_ins, dwell_tbl.dwell_ms, 0:5:100, 'FaceColor', c_orange, 'EdgeColor', 'w', 'FaceAlpha', 0.85);
-    xline(ax_ins, 80, '--r', '80 ms', 'LineWidth', 1.8, 'FontSize', 9);
-    xline(ax_ins, 50, ':k', '50 ms', 'LineWidth', 1.3, 'FontSize', 8);
-    xlabel(ax_ins, 'Dwell (ms)', 'FontSize', 9, 'FontWeight', 'bold');
-    ylabel(ax_ins, 'Count', 'FontSize', 9, 'FontWeight', 'bold');
-    title(ax_ins, 'Sub-100 ms Noise Band', 'FontSize', 9, 'FontWeight', 'bold');
-    grid(ax_ins, 'on');
-    set(ax_ins, 'FontSize', 8, 'TickDir', 'out', 'Box', 'off');
-
-    % Panel B: Cumulative distribution & percentiles
-    ax2 = subplot(1, 2, 2);
-    hold(ax2, 'on');
-    [f_cdf, x_cdf] = ecdf(dwell_tbl.dwell_ms);
-    plot(ax2, x_cdf, f_cdf * 100, 'Color', c_blue, 'LineWidth', 2.5);
-    xline(ax2, 80, '--r', sprintf('80 ms (%.1f%% of COMs)', 100*mean(dwell_tbl.dwell_ms < 80)), 'LineWidth', 2, 'FontSize', 10);
-    xline(ax2, 50, ':k', sprintf('50 ms (%.1f%%)', 100*mean(dwell_tbl.dwell_ms < 50)), 'LineWidth', 1.5, 'FontSize', 9);
-    xline(ax2, 25, '-.g', sprintf('25 ms (%.1f%%)', 100*mean(dwell_tbl.dwell_ms < 25)), 'LineWidth', 1.5, 'FontSize', 9);
-    xlabel(ax2, 'Dwell Time Threshold (Milliseconds)', 'FontSize', 11, 'FontWeight', 'bold');
-    ylabel(ax2, 'Cumulative % of COMs Filtered Out', 'FontSize', 11, 'FontWeight', 'bold');
-    title(ax2, 'B. Cumulative Noise Elimination Curve', 'FontSize', 12, 'FontWeight', 'bold');
-    grid(ax2, 'on');
-    set(ax2, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off', 'XLim', [0, 450], 'YLim', [0, 100]);
-
-    % Save Figure COM 1
-    exportgraphics(fig1, fullfile(save_dir, 'SuppFig_COM_1_Dwell_Distributions.png'), 'Resolution', 300);
-    exportgraphics(fig1, fullfile(save_dir, 'SuppFig_COM_1_Dwell_Distributions.pdf'));
-    try, exportgraphics(fig1, fullfile(save_dir, 'SuppFig_COM_1_Dwell_Distributions.svg'), 'ContentType', 'vector'); catch, end
-    savefig(fig1, fullfile(save_dir, 'SuppFig_COM_1_Dwell_Distributions.fig'));
+    fprintf('Tracked %d valid trials for COM threshold sweep.\n', length(trial_data));
 
     %% =====================================================================
     %% 2. PARAMETER SWEEP ACROSS SAMPLES (CORRECT & INCORRECT SEPARATELY)
@@ -285,88 +201,11 @@ function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, 
         sweep_err_dz(th_idx)      = dz_e;
     end
 
-    % Pre-registered baseline values (Threshold = 1 sample, raw):
-    prereg_con   = sweep_corr_con_m(1);
-    prereg_incon = sweep_corr_incon_m(1);
-    prereg_dz    = sweep_corr_dz(1);
-    prereg_pval  = sweep_corr_pval(1);
-
-    fig2 = figure('Name', 'SuppFig COM 2 - Threshold Parameter Sweep', 'Position', [100, 100, 1300, 520], 'Color', 'w');
-
-    % Subplot 1: COM Count vs Threshold with Pre-Reg highlighted
-    ax2_1 = subplot(1, 3, 1);
-    hold(ax2_1, 'on');
-    p_c = plot(ax2_1, sample_thresholds, sweep_corr_con_m, '-o', 'Color', c_blue, 'LineWidth', 2.2, 'MarkerSize', 6, 'MarkerFaceColor', c_blue);
-    p_i = plot(ax2_1, sample_thresholds, sweep_corr_incon_m, '-s', 'Color', c_red, 'LineWidth', 2.2, 'MarkerSize', 6, 'MarkerFaceColor', c_red);
-    % Highlight pre-registered reference points
-    plot(ax2_1, 1, prereg_con, 'o', 'Color', [0.0, 0.2, 0.6], 'MarkerSize', 11, 'LineWidth', 2.5);
-    plot(ax2_1, 1, prereg_incon, 's', 'Color', [0.6, 0.0, 0.0], 'MarkerSize', 11, 'LineWidth', 2.5);
-    text(ax2_1, 2.1, prereg_incon - 0.02, sprintf('Pre-registered Raw\n(%.2f vs %.2f)', prereg_con, prereg_incon), ...
-        'FontSize', 9, 'FontWeight', 'bold', 'Color', [0.2 0.2 0.2], 'VerticalAlignment', 'top');
-
-    xlabel(ax2_1, 'Minimal Dwell Threshold (Samples)', 'FontSize', 11, 'FontWeight', 'bold');
-    ylabel(ax2_1, 'Mean Number of COMs per Trial', 'FontSize', 11, 'FontWeight', 'bold');
-    title(ax2_1, 'A. COM Count vs. Threshold (Correct Trials)', 'FontSize', 12, 'FontWeight', 'bold');
-    legend(ax2_1, [p_c, p_i], {'Congruent', 'Incongruent'}, 'Location', 'northeast', 'Box', 'off');
-    grid(ax2_1, 'on');
-    set(ax2_1, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off', 'XLim', [0.5, 20.5], 'YLim', [1.05, 2.08]);
-
-    % Subplot 2: Effect Size vs Threshold (split by Correctness)
-    ax2_2 = subplot(1, 3, 2);
-    hold(ax2_2, 'on');
-    p_dz_c = plot(ax2_2, sample_thresholds, sweep_corr_dz, '-o', 'Color', c_purple, 'LineWidth', 2.4, 'MarkerSize', 6, 'MarkerFaceColor', c_purple);
-    p_dz_e = plot(ax2_2, sample_thresholds, sweep_err_dz, '--s', 'Color', c_gray, 'LineWidth', 1.8, 'MarkerSize', 6, 'MarkerFaceColor', c_gray);
-    % Reference line for pre-registered effect size
-    yline(ax2_2, prereg_dz, '--', 'Color', c_purple, 'LineWidth', 1.2);
-    text(ax2_2, 10, prereg_dz - 0.035, sprintf('Pre-reg d_z = %.2f', prereg_dz), 'FontSize', 9, 'FontWeight', 'bold', 'Color', c_purple);
-    yline(ax2_2, 0.5, ':k', 'LineWidth', 1.0);
-    text(ax2_2, 4.5, 0.512, 'Medium (d_z = 0.50)', 'FontSize', 9, 'Color', [0.15 0.15 0.15], 'VerticalAlignment', 'bottom');
-    yline(ax2_2, 0.0, '-k', 'LineWidth', 0.8, 'Color', [0.7 0.7 0.7]);
-    xlabel(ax2_2, 'Minimal Dwell Threshold (Samples)', 'FontSize', 11, 'FontWeight', 'bold');
-    ylabel(ax2_2, 'Priming Effect Size (Cohen''s d_z)', 'FontSize', 11, 'FontWeight', 'bold');
-    title(ax2_2, 'B. Effect Size Split by Correctness', 'FontSize', 12, 'FontWeight', 'bold');
-    legend(ax2_2, [p_dz_c, p_dz_e], {'Correct Trials', 'Incorrect Trials'}, 'Location', 'southeast', 'Box', 'off');
-    grid(ax2_2, 'on');
-    set(ax2_2, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off', 'XLim', [0.5, 20.5], 'YLim', [-0.25, 0.58]);
-
-    % Subplot 3: p-value curve (split by Correctness, true logarithmic Y-axis)
-    ax2_3 = subplot(1, 3, 3);
-    p_pv_c = semilogy(ax2_3, sample_thresholds, sweep_corr_pval, '-o', 'Color', [0.85, 0.33, 0.10], 'LineWidth', 2.4, 'MarkerSize', 6, 'MarkerFaceColor', [0.85, 0.33, 0.10]);
-    hold(ax2_3, 'on');
-    p_pv_e = semilogy(ax2_3, sample_thresholds, sweep_err_pval, '--s', 'Color', c_gray, 'LineWidth', 1.8, 'MarkerSize', 6, 'MarkerFaceColor', c_gray);
-    set(ax2_3, 'YScale', 'log');
-    yline(ax2_3, 0.05, '--r', '\alpha = 0.05', 'LineWidth', 1.8, 'FontSize', 9, 'LabelHorizontalAlignment', 'right', 'LabelVerticalAlignment', 'bottom');
-    yline(ax2_3, prereg_pval, ':', 'Color', [0.85, 0.33, 0.10], 'LineWidth', 1.3);
-    text(ax2_3, 1.3, prereg_pval * 1.22, sprintf('Pre-reg p = %.3f', prereg_pval), 'FontSize', 8.5, 'FontWeight', 'bold', 'Color', [0.85, 0.33, 0.10], 'VerticalAlignment', 'bottom');
-    xlabel(ax2_3, 'Minimal Dwell Threshold (Samples)', 'FontSize', 11, 'FontWeight', 'bold');
-    ylabel(ax2_3, 'p-value (Log Scale)', 'FontSize', 11, 'FontWeight', 'bold');
-    title(ax2_3, 'C. p-values Split by Correctness', 'FontSize', 12, 'FontWeight', 'bold');
-    max_p_corr = max(sweep_corr_pval);
-    if max_p_corr < 0.05
-        corr_leg_lbl = sprintf('Correct Trials (all p <= %.3f)', max_p_corr);
-    else
-        corr_leg_lbl = 'Correct Trials';
-    end
-    set(ax2_3, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off', 'XLim', [0.5, 20.5], 'YLim', [0.003, 1.3], ...
-        'YTick', [0.005, 0.01, 0.05, 0.1, 0.5, 1], 'YTickLabel', {'0.005', '0.01', '0.05', '0.1', '0.5', '1'});
-    lgd3 = legend(ax2_3, [p_pv_c, p_pv_e], {corr_leg_lbl, 'Incorrect Trials (n.s.)'}, 'Location', 'east', 'Box', 'off', 'FontSize', 9);
-    drawnow;
-    lgd3.Position(2) = lgd3.Position(2) + 0.08;
-    grid(ax2_3, 'on');
-
-    % Save Figure COM 2
-    exportgraphics(fig2, fullfile(save_dir, 'SuppFig_COM_2_Threshold_Sweep.png'), 'Resolution', 300);
-    exportgraphics(fig2, fullfile(save_dir, 'SuppFig_COM_2_Threshold_Sweep.pdf'));
-    try, exportgraphics(fig2, fullfile(save_dir, 'SuppFig_COM_2_Threshold_Sweep.svg'), 'ContentType', 'vector'); catch, end
-    savefig(fig2, fullfile(save_dir, 'SuppFig_COM_2_Threshold_Sweep.fig'));
-
     %% =====================================================================
     %% 3. PHYSICAL MILLISECOND THRESHOLDS (10 ms, 25 ms, 50 ms, 80 ms)
     %% =====================================================================
     ms_targets = [10, 25, 50, 80];
     n_ms = length(ms_targets);
-
-    fig3 = figure('Name', 'SuppFig COM 3 - Physical Millisecond Thresholds', 'Position', [100, 100, 1350, 500], 'Color', 'w');
 
     ms_stats_rows = [];
 
@@ -470,55 +309,10 @@ function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, 
         re.Cohens_dz = dz_ms_e;
 
         ms_stats_rows = [ms_stats_rows; rc; re];
-
-        % Plot subplot for this physical threshold with clear p-values split by correctness
-        ax_m = subplot(1, 4, m_i);
-        hold(ax_m, 'on');
-
-        m_con_corr = mean(sub_con_c);
-        m_inc_corr = mean(sub_inc_c);
-        m_con_err  = nanmean(sub_con_e);
-        m_inc_err  = nanmean(sub_inc_e);
-
-        sem_con_corr = std(sub_con_c) / sqrt(n_subs);
-        sem_inc_corr = std(sub_inc_c) / sqrt(n_subs);
-        sem_con_err  = nanstd(sub_con_e) / sqrt(sum(~isnan(sub_con_e)));
-        sem_inc_err  = nanstd(sub_inc_e) / sqrt(sum(~isnan(sub_inc_e)));
-
-        x_pts = [1, 2];
-        p_c_m = plot(ax_m, x_pts, [m_con_corr, m_con_err], '-o', 'Color', c_blue, 'LineWidth', 2.2, 'MarkerSize', 7, 'MarkerFaceColor', c_blue);
-        p_i_m = plot(ax_m, x_pts, [m_inc_corr, m_inc_err], '-s', 'Color', c_red, 'LineWidth', 2.2, 'MarkerSize', 7, 'MarkerFaceColor', c_red);
-
-        errorbar(ax_m, x_pts, [m_con_corr, m_con_err], [sem_con_corr, sem_con_err], 'LineStyle', 'none', 'Color', c_blue, 'LineWidth', 1.4, 'CapSize', 6);
-        errorbar(ax_m, x_pts, [m_inc_corr, m_inc_err], [sem_inc_corr, sem_inc_err], 'LineStyle', 'none', 'Color', c_red, 'LineWidth', 1.4, 'CapSize', 6);
-
-        % Annotate simple effects directly above data points
-        text(ax_m, 1, max(m_con_corr, m_inc_corr) + 0.16, ...
-            sprintf('Correct:\n\\Delta = +%.2f\np = %.3f*', diff_ms_c, p_ms_c), ...
-            'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'bold', 'Color', [0.1 0.1 0.1]);
-
-        text(ax_m, 2, max(m_con_err, m_inc_err) + 0.16, ...
-            sprintf('Incorrect:\n\\Delta = %+.2f\np = %.3f (n.s.)', diff_ms_e, p_ms_e), ...
-            'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'normal', 'Color', [0.35 0.35 0.35]);
-
-        set(ax_m, 'XTick', [1, 2], 'XTickLabel', {'Correct', 'Incorrect'}, 'XLim', [0.55, 2.45], 'YLim', [0.65, 2.15]);
-        ylabel(ax_m, 'Mean COMs (±SEM)', 'FontSize', 10, 'FontWeight', 'bold');
-        title(ax_m, sprintf('%d ms Cutoff', target_ms), 'FontSize', 11, 'FontWeight', 'bold');
-        grid(ax_m, 'on');
-        set(ax_m, 'FontSize', 10, 'TickDir', 'out', 'Box', 'off');
-        if m_i == 1
-            legend(ax_m, [p_c_m, p_i_m], {'Congruent', 'Incongruent'}, 'Location', 'northeast', 'Box', 'off', 'FontSize', 9);
-        end
     end
 
-    % Save Figure COM 3
-    exportgraphics(fig3, fullfile(save_dir, 'SuppFig_COM_3_Physical_Thresholds.png'), 'Resolution', 300);
-    exportgraphics(fig3, fullfile(save_dir, 'SuppFig_COM_3_Physical_Thresholds.pdf'));
-    try, exportgraphics(fig3, fullfile(save_dir, 'SuppFig_COM_3_Physical_Thresholds.svg'), 'ContentType', 'vector'); catch, end
-    savefig(fig3, fullfile(save_dir, 'SuppFig_COM_3_Physical_Thresholds.fig'));
-
     %% ---------------------------------------------------------------------
-    %% 4. EXPORT STATISTICAL SUMMARY TABLE (SPLIT BY CORRECTNESS)
+    %% 4. BUILD STATISTICAL SUMMARY TABLE (SPLIT BY CORRECTNESS)
     %% ---------------------------------------------------------------------
     sample_rows = [];
     key_samples = [1, 2, 5, 10, 15, 20];
@@ -559,16 +353,7 @@ function [Stats_Table, fig_handles] = plot_supplementary_com_analysis(save_dir, 
     end
 
     Stats_Table = struct2table([sample_rows; ms_stats_rows]);
-    writetable(Stats_Table, fullfile(save_dir, 'Supplementary_COM_Threshold_Stats.csv'));
-    writetable(Stats_Table, fullfile(stats_dir, 'Supplementary_COM_Threshold_Stats.csv'));
-    try
-        writetable(Stats_Table, fullfile(save_dir, 'Supplementary_COM_Threshold_Stats.xlsx'));
-        writetable(Stats_Table, fullfile(stats_dir, 'Supplementary_COM_Threshold_Stats.xlsx'));
-    catch
-    end
-
-    fig_handles = [fig1, fig2, fig3];
-    fprintf('=== Successfully saved all Supplementary COM figures and tables to %s ===\n', save_dir);
+    fprintf('=== Successfully computed Supplementary COM threshold statistics in memory ===\n');
 end
 
 %% Helper function for debouncing

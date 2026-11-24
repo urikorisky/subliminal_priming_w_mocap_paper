@@ -708,9 +708,8 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
 
     %%% Gather Perceptual Awareness Scores into stats tables (from primary TrajNorm_noStd round):
     if (p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
-        out_stats_dir = analysisParameters.targetStats_allAnalysesCombined;
         [pas_summary_table, pas_by_sub_table, pas_stats_table, kb_PAS_Pct_Table, reach_PAS_Pct_Table] = ...
-            compute_pas_analyses(reach_avg_each, keyboard_avg_each, good_subs, out_stats_dir);
+            compute_pas_analyses(reach_avg_each, keyboard_avg_each, good_subs);
         
         statsTables.primeAwarenessDist = struct(...
             'Keyboard', kb_PAS_Pct_Table, ...
@@ -726,92 +725,62 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
     statsTables.rawAggData.(roundName).keyboard = keyboard_avg_each;
     statsTables.good_subs = good_subs;
 
-    % Aggregate figure handles
-    if (isfield(analysisParameters,'figureHandles'))
-        p.figureHandles = analysisParameters.figureHandles;
-    else
-        p.figureHandles = struct();
-    end
-    if ~isfield(p.figureHandles, roundName)
-        p.figureHandles.(roundName) = struct();
-    end
+    temp_figs = gobjects(0);
 
-    %% - Fig. 2 + Supp. Fig. 3 (Prime Recognition — identical across flavors; run once in primary round)
+    %% - Prime Recognition Statistics (identical across flavors; run once in primary round)
     if (p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
         [RecogFigHandles, Recog_Stats, Recog_Sub_Stats] = plotMultiRecognition_SepByCong('good_subs', traj_names{1}{1}, plt_p, p);
-        p.figureHandles.(roundName).fig2     = RecogFigHandles.incon;
-        p.figureHandles.(roundName).suppFig3 = RecogFigHandles.con;
+        if isfield(RecogFigHandles, 'incon') && isgraphics(RecogFigHandles.incon), close(RecogFigHandles.incon); end
+        if isfield(RecogFigHandles, 'con') && isgraphics(RecogFigHandles.con), close(RecogFigHandles.con); end
 
         statsTables.Prime_Performance_Stats  = Recog_Stats;
         statsTables.Prime_Performance_By_Sub = Recog_Sub_Stats;
     end
 
-    %% - Fig. 3 i-l - Single Participants plots (TrajNorm_noStandardization only)
-    if (p.NORM_TRAJ && ~p.NORMALIZE_WITHIN_SUB)
-        subs_to_present = good_subs([5,10]);
-        subFigsDesignation = {'i,k','j,l'};
-        iDesig = 1;
-        for iSub = subs_to_present
-            sub_f(iSub,1) = figure('Name',[' Figure 3)' subFigsDesignation{iDesig} '  Sub ' num2str(iSub) ' - ' roundName], 'Position',[597 84 602 760], 'MenuBar','figure');
-            theme light;
-            iDesig = iDesig + 1;
-        end
-        for iSub = subs_to_present
-            figure(sub_f(iSub,1));
-            plotAllTrajs(iSub, traj_names, plt_p, p);
-        end
-        p.figureHandles.(roundName).fig_3_ik = sub_f(53,1);
-        figure(p.figureHandles.(roundName).fig_3_ik);
-        title('Figure 3) i,k');
-        p.figureHandles.(roundName).fig_3_jl = sub_f(59,1);
-        figure(p.figureHandles.(roundName).fig_3_jl);
-        title('Figure 3) j,l');
-    end
-
     %% - Fig. 3 a-h & Discrete Variable Statistics (ONLY for TrajNorm flavors; excluded in noTrajNorm)
     if (p.NORM_TRAJ)
-        fig_3_ah_handle = figure('Name',['All Subs - ' roundName], 'Color', 'w', 'Position', [40 40 1650 900], 'MenuBar','figure');
-        p.figureHandles.(roundName).fig_3_ah = fig_3_ah_handle;
+        fig_3_ah_handle = figure('Name',['All Subs - ' roundName], 'Color', 'w', 'Position', [40 40 1650 900], 'Visible', 'off');
+        temp_figs(end+1) = fig_3_ah_handle;
         plotFlag = true;
 
         % ------- Avg traj with shade -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,10,[2:5]);
         plotMultiAvgTrajWithShade(traj_names, plt_p, p, plotFlag);
 
         % ------- Response Times Keyboard -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,5,4);
         KB_RT_stats = plotMultiKeyboardRt(traj_names, plt_p, p);
         currStatsTable = transferStatsToStatsTable(KB_RT_stats, currStatsTable);
 
         % ------- Reach Area -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,5,5);
         ReachArea_Stats = plotMultiReachArea(traj_names, plt_p, p, plotFlag);
         currStatsTable = transferStatsToStatsTable(ReachArea_Stats, currStatsTable);
 
         % ------- MAD -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,5,6);
         MAD_Stats = plotMultiMad_CongIncong(traj_names, plt_p, p, plotFlag);
         currStatsTable = transferStatsToStatsTable(MAD_Stats, currStatsTable);
 
         % ------- Reaching Onset + Reaching Duration -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot_p_rmt = [2,5,9; 2,5,7];
         [Reach_RT_Stats, Reach_MT_Stats] = plotMultiReactMtRt(traj_names, subplot_p_rmt, plt_p, p, plotFlag);
         currStatsTable = transferStatsToStatsTable(Reach_RT_Stats, currStatsTable);
         currStatsTable = transferStatsToStatsTable(Reach_MT_Stats, currStatsTable);
 
         % ------- Total distance traveled -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,5,8);
         Total_Distance_Stats = plotMultiTotDist(traj_names, plt_p, p, plotFlag);
         currStatsTable = transferStatsToStatsTable(Total_Distance_Stats, currStatsTable);
 
         % ------- COM -------
-        figure(fig_3_ah_handle);
+        set(0, 'CurrentFigure', fig_3_ah_handle);
         subplot(2,5,10);
         COM_Stats = plotMultiCom(traj_names, plt_p, p, plotFlag);
         currStatsTable = transferStatsToStatsTable(COM_Stats, currStatsTable);
@@ -830,7 +799,7 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         end
     end
 
-    %% - Fig. 4 (Full-Trajectory Permutation Testing — Scoped Strictly to Relevant Features per Flavor)
+    %% - Full-Trajectory Permutation Testing (Scoped Strictly to Relevant Features per Flavor)
     plt_p.errbar_type = 'ci';
 
     fullTraj_Stats = struct('name',[], ...
@@ -845,9 +814,10 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
     fullTraj_Stats_Table.Properties.VariableNames{end} = 't*';
 
     if ~p.NORM_TRAJ
-        % --- Flavor: noTrajNorm_noStandardization (4 analyzed trajectory features, 1x4 Fig. 4) ---
+        % --- Flavor: noTrajNorm_noStandardization (4 analyzed trajectory features) ---
         fig4Handle = figure('Name', sprintf('Figure 4 - %s', roundName), 'Color', 'w', ...
-            'Position', [50, 200, 1750, 500], 'MenuBar', 'figure');
+            'Position', [50, 200, 1750, 500], 'Visible', 'off');
+        temp_figs(end+1) = fig4Handle;
         tl4 = tiledlayout(fig4Handle, 1, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
         ax_f4_1 = nexttile(tl4, 1);
@@ -874,13 +844,11 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         title(ax_f4_4, '(d) Heading Angle');
         fullTraj_Stats_Table = transferStatsToStatsTable(HeadingAngle_Clusters_Stats, fullTraj_Stats_Table);
 
-        p.figureHandles.(roundName).fig4 = fig4Handle;
-        p.figureHandles.Fig_4_Main       = fig4Handle;
-
     elseif ~p.NORMALIZE_WITHIN_SUB
-        % --- Flavor: TrajNorm_noStandardization (3 valid trajectory features, 1x3 Fig. 4) ---
+        % --- Flavor: TrajNorm_noStandardization (3 valid trajectory features) ---
         fig4Handle = figure('Name', sprintf('Figure 4 - %s', roundName), 'Color', 'w', ...
-            'Position', [50, 200, 1350, 500], 'MenuBar', 'figure');
+            'Position', [50, 200, 1350, 500], 'Visible', 'off');
+        temp_figs(end+1) = fig4Handle;
         tl4 = tiledlayout(fig4Handle, 1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 
         ax_f4_1 = nexttile(tl4, 1);
@@ -900,8 +868,6 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         Xaxis_STD_Clusters_Stats = plotMultiXStd(traj_names, plt_p, p);
         title(ax_f4_3, '(c) Movement Variation');
         fullTraj_Stats_Table = transferStatsToStatsTable(Xaxis_STD_Clusters_Stats, fullTraj_Stats_Table);
-
-        p.figureHandles.(roundName).fig4 = fig4Handle;
 
         % Silently compute Heading Angle cluster strictly for Figure S1 (2022 pre-reg audit tree)
         s1_ha_stats = plotMultiHeadAngle(traj_names, plt_p, p, 'xangle', false);
@@ -986,7 +952,12 @@ function [figureHandles,statsTables] = analysis_pipeline(analysisParameters,roun
         end
     end
 
-    figureHandles = p.figureHandles;
+    for tf_i = 1:numel(temp_figs)
+        if isgraphics(temp_figs(tf_i))
+            close(temp_figs(tf_i));
+        end
+    end
+    figureHandles = struct();
     statsTables.(roundName) = currStatsTable;
     statsTables.dynamic_trajectory_windows.(roundName) = dynamic_windows;
 

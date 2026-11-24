@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="340.078mm" height="97.0139mm"
+ viewBox="0 0 964 275"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"  version="1.2" baseProfile="tiny">
+<title>Qt SVG Document</title>
+<desc>MATLAB, The MathWorks, Inc. Version 25.2.0.3055257 R2025b Update 2</desc>
+<defs>
+</defs>
+<g fill="none" stroke="black" stroke-width="1" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel" >
+
+<g fill="#ffffff" fill-opacity="1" stroke="none" transform="matrix(0.5,0,0,0.5,-13,-24.5)"
+font-family="MS Shell Dlg 2" font-size="8" font-weight="400" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M25,47 L1954,47 L1954,597 L25,597 L25,47"/>
+</g>
+
+<g fill="#212121" fill-opacity="1" stroke="#212121" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,238.5,12.5)"
+font-family="Calibri" font-size="32" font-weight="700" font-style="normal" 
+>
+<text fill="#212121" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="32" font-weight="700" font-style="normal" 
+ >(f) Benjamini-Hochberg FDR Correction [Temporal Full-Trajectory Analysis]</text>
+</g>
+
+<g fill="#335280" fill-opacity="1" stroke="none" transform="matrix(5e-05,0,0,5e-05,-13,-24.5)"
+font-family="Calibri" font-size="32" font-weight="700" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M300000,2.048e+06 L1.95e+07,2.048e+06 L1.95e+07,1.13e+06 L300000,1.13e+06 L300000,2.048e+06"/>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,13.52,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Full-Trajectory Measure</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,309.4,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Status</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,423.65,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Cluster Window</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,574.6,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Cluster |dz|</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,698.45,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Raw p</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,786.1,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >FDR q</text>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#ffffff" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,865.22,58.45)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<text fill="#ffffff" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+ >Significant</text>
+</g>
+
+<g fill="#f6f9fc" fill-opacity="1" stroke="none" transform="matrix(5e-05,0,0,5e-05,-13,-24.5)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M300000,3.182e+06 L1.95e+07,3.182e+06 L1.95e+07,2.318e+06 L300000,2.318e+06 L300000,3.182e+06"/>
+</g>
+
+<g fill="#d1d9e3" fill-opacity="1" stroke="#d1d9e3" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="round" transform="matrix(0.5,0,0,0.5,-13,-24.5)"
+font-family="Calibri" font-size="29" font-weight="700" font-style="normal" 
+>
+<polyline fill="none" vector-effect="none" points="30,318.2 1950,318.2 " />
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,13.52,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Deviance From Center</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,289.4,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Pre-Registered</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,441.65,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >190-340 ms</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,600.1,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.73</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,699.2,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0239</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,785.6,116.25)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0318</text>
+</g>
+
+<g fill="#147326" fill-opacity="1" stroke="#147326" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,864.47,116.25)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<text fill="#147326" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+ >Yes (q &lt; .05)</text>
+</g>
+
+<g fill="#fffbe3" fill-opacity="1" stroke="none" transform="matrix(5e-05,0,0,5e-05,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M300000,4.1e+06 L1.95e+07,4.1e+06 L1.95e+07,3.236e+06 L300000,3.236e+06 L300000,4.1e+06"/>
+</g>
+
+<g fill="#d1d9e3" fill-opacity="1" stroke="#d1d9e3" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="round" transform="matrix(0.5,0,0,0.5,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<polyline fill="none" vector-effect="none" points="30,410 1950,410 " />
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,13.52,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Implied Endpoint</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,305.15,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Post-Hoc</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,441.65,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >150-340 ms</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,600.1,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.74</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,699.2,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0004</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,785.6,162.15)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0007</text>
+</g>
+
+<g fill="#147326" fill-opacity="1" stroke="#147326" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,864.47,162.15)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<text fill="#147326" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+ >Yes (q &lt; .05)</text>
+</g>
+
+<g fill="#f6f9fc" fill-opacity="1" stroke="none" transform="matrix(5e-05,0,0,5e-05,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M300000,5.018e+06 L1.95e+07,5.018e+06 L1.95e+07,4.154e+06 L300000,4.154e+06 L300000,5.018e+06"/>
+</g>
+
+<g fill="#d1d9e3" fill-opacity="1" stroke="#d1d9e3" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="round" transform="matrix(0.5,0,0,0.5,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<polyline fill="none" vector-effect="none" points="30,501.8 1950,501.8 " />
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,13.52,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Heading Angle</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,289.4,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Pre-Registered</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,441.65,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >150-320 ms</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,600.1,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.68</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,699.2,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0003</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,785.6,208.05)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >0.0007</text>
+</g>
+
+<g fill="#147326" fill-opacity="1" stroke="#147326" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,864.47,208.05)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<text fill="#147326" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+ >Yes (q &lt; .05)</text>
+</g>
+
+<g fill="#f6f9fc" fill-opacity="1" stroke="none" transform="matrix(5e-05,0,0,5e-05,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M300000,5.936e+06 L1.95e+07,5.936e+06 L1.95e+07,5.072e+06 L300000,5.072e+06 L300000,5.936e+06"/>
+</g>
+
+<g fill="#d1d9e3" fill-opacity="1" stroke="#d1d9e3" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="round" transform="matrix(0.5,0,0,0.5,-13,-24.5)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<polyline fill="none" vector-effect="none" points="30,593.6 1950,593.6 " />
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,13.52,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Horizontal Movement Variation</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,289.4,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >Pre-Registered</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,444.4,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >No Cluster</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,605.6,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >---</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,699.2,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >1.0000</text>
+</g>
+
+<g fill="#1a1a1a" fill-opacity="1" stroke="#1a1a1a" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,785.6,253.95)"
+font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+>
+<text fill="#1a1a1a" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="400" font-style="normal" 
+ >1.0000</text>
+</g>
+
+<g fill="#8c2626" fill-opacity="1" stroke="#8c2626" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(0.5,0,0,0.5,888.97,253.95)"
+font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+>
+<text fill="#8c2626" fill-opacity="1" stroke="none" xml:space="preserve" x="0" y="0" font-family="Calibri" font-size="26" font-weight="700" font-style="normal" 
+ >No</text>
+</g>
+</g>
+</svg>

@@ -1,22 +1,11 @@
-function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, within_tbl_f4] = generate_si_reanalysis_flavor(analysisPrms)
-% GENERATE_SI_REANALYSIS_FLAVOR Performs an entire re-analysis of the experimental
-% data ignoring time-sensitive exclusion criteria ("too early", "too late", and
-% "slow movement") during preprocessing and screening (Flavor 4).
+function [si_reanalysis_struct] = generate_si_reanalysis_flavor(analysisPrms, within_tbl_f1)
+% GENERATE_SI_REANALYSIS_FLAVOR Performs the supplementary re-analysis
+% removing the offline slow-movement ("very_slow_mvmnt", > 3 SD movement duration)
+% exclusion criterion during trial and participant screening, while keeping online
+% abort criteria ("early_res", "late_res") and all other pre-registered criteria intact.
 %
-% Re-analysis specifications:
-% - Analysis Flavor: Trajectories normalized to %path, no within-participant standardization (Flavor 1 pre-registered).
-% - Included Sample: All participants who meet the >= 25 minimum trials/condition criterion
-%   based strictly on non-time-sensitive criteria (N = 36 included, 6 excluded: Subs 58, 64, 68, 69, 73, 89).
-% - Computes 8 discrete measures (Congruent, Incongruent, Diff, Total Across Conditions, Cohen's dz, paired t, p-value).
-% - Computes continuous full-trajectory cluster permutation tests (traj, iep, x_std) identically formatted to the main analysis.
-% - Computes 10,000 bootstrap effect sizes and comparisons vs Keyboard RT strictly for pre-registered variables.
-% - Generates forest plots:
-%     1. Effect_Sizes_Flavor_4_noTimeExclusion
-%     2. Effect_Comparisons_Flavor_4_vs_KB_RT
-%     3. Effect_Comparisons_Flavor_4_vs_Flavor_1_SideBySide (paired with Flavor 4 right above Flavor 1)
-% - Exports results to a dedicated standalone workbook:
-%   analysis/statistics/SI_Reanalysis_noTimeExclusions.xlsx
-%   (and standalone CSV files), keeping the primary manuscript All_Statistics.xlsx pristine.
+% Returns all summary, decomposition, by-participant, permutation, and
+% bootstrap tables in memory via si_reanalysis_struct.
 
     if nargin < 1 || isempty(analysisPrms)
         analysisPrms = getDefaultAnalysisParams();
@@ -25,30 +14,29 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
     curr_func_dir = fileparts(mfilename('fullpath'));
     addpath(genpath(curr_func_dir));
 
-    raw_proc_folder = analysisPrms.readyPreProcData_TrajNorm_noStandardization_folder;
-    target_proc_folder = fullfile(fileparts(mfilename('fullpath')), '../../processed_data/noTimeExclusion_TrajNorm');
+    if analysisPrms.fromRawData
+        raw_proc_folder = analysisPrms.targetPreProcData_TrajNorm_noStandardization_folder;
+    else
+        raw_proc_folder = analysisPrms.readyPreProcData_TrajNorm_noStandardization_folder;
+    end
+    if ~exist(raw_proc_folder, 'dir')
+        raw_proc_folder = fullfile(curr_func_dir, '../../processed_data/nonStandardized_TrajNorm');
+    end
+    target_proc_folder = fullfile(curr_func_dir, '../../processed_data/noTimeExclusion_TrajNorm');
     if ~exist(target_proc_folder, 'dir')
         mkdir(target_proc_folder);
     end
 
-    out_stats_dir = analysisPrms.targetStats_allAnalysesCombined;
-    if ~exist(out_stats_dir, 'dir')
-        mkdir(out_stats_dir);
-    end
-
-    out_figs_dir = fullfile(analysisPrms.targetFigs_allAnalysesCombined, 'Effect_Sizes');
-    if ~exist(out_figs_dir, 'dir')
-        mkdir(out_figs_dir);
-    end
-
-    % 1. Sample Definition
-    good_subs_si = [47, 49:57, 59:63, 65:67, 70:72, 74:85, 87, 88, 90]; % N=36
+    % 1. Sample Definition (N = 31: Flavor 1 N=30 + Sub 74 rescued when very_slow_mvmnt is removed)
+    good_subs_si = [47, 49:51, 53:57, 59, 62, 65:67, 70:72, 74:85, 88, 90]; % N=31
     n_subs = numel(good_subs_si);
     all_subs = [47, 49:85, 87:90]; % N=42
 
-    p = load('../../experiment/RUN_ME/code/p.mat'); p = p.p;
+    exp_p_file = fullfile(curr_func_dir, '../../../experiment/RUN_ME/code/p.mat');
+    p = load(exp_p_file); p = p.p;
     p.DAY = 'day2';
     p.SUBS = all_subs;
+    p.ORIG_SUBS = all_subs;
     p.SUBS_STRING = regexprep(num2str(all_subs), '\s+', '_');
     p.REF_RATE_HZ = 100;
     p.NORM_TRAJ = true;
@@ -63,12 +51,15 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
     p.FILTER_ORDER = 4;
     p.LOW_PASS_CUT_OFF = 10;
     p.USE_REF_DATA = false;
-    p.REF_DATA_FOLDER = fullfile(fileparts(mfilename('fullpath')), '../../processed_data/nonStandardized_TrajNorm');
-    p.PROC_DATA_FOLDER = target_proc_folder;
+    p.REF_DATA_FOLDER = raw_proc_folder;
+    p.PROC_DATA_FOLDER = raw_proc_folder;
+    p.DATA_FOLDER = fullfile(curr_func_dir, '../../../../raw_data_from_OSF/');
 
     traj_names = {{'target_x_to', 'target_y_to', 'target_z_to'}};
 
-    cache_file = fullfile(target_proc_folder, 'si_noTimeExclusion_all_avgs.mat');
+    cache_file = fullfile(target_proc_folder, 'si_noVerySlow_all_avgs.mat');
+    legacy_cache_file = fullfile(target_proc_folder, 'si_noTimeExclusion_all_avgs.mat');
+
     if analysisPrms.usePreprocDataWhereverPossible && exist(cache_file, 'file')
         fprintf('Loading precomputed SI re-analysis averages from %s...\n', cache_file);
         loaded = load(cache_file);
@@ -78,63 +69,17 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
         k_trials = loaded.k_trials;
         reach_area = loaded.reach_area;
     else
-        fprintf('Computing SI re-analysis trial averages (ignoring time-sensitive exclusions)...\n');
-        k_avgs = cell(max(all_subs), 1);
-        k_trials = cell(max(all_subs), 1);
-        r_avgs = cell(max(all_subs), 1);
-        r_trials = cell(max(all_subs), 1);
-
-        for s = all_subs
-            [r_avg, k_avg, r_tr, k_tr] = compute_subject_si_no_time_exclusions(s, raw_proc_folder, p);
-            k_avgs{s} = k_avg;
-            k_trials{s} = k_tr;
-            r_avgs{s} = r_avg;
-            r_trials{s} = r_tr;
-        end
-
-        reach_area = struct('con', NaN(max(all_subs), 1), 'incon', NaN(max(all_subs), 1));
-        for s = all_subs
-            r_tbl_file = fullfile(raw_proc_folder, sprintf('sub%dday2_reach_data_proc.mat', s));
-            r_loaded = load(r_tbl_file);
-            r_tbl = r_loaded.reach_data_table;
-            r_tbl(r_tbl.practice >= 1, :) = [];
-
-            bt_file = fullfile(raw_proc_folder, 'bad_trials_day2_target_x_to_subs_47_49-85_87-90.mat');
-            bt = load(bt_file);
-            r_bt = bt.reach_bad_trials{s};
-
-            time_crit = ["early_res", "late_res", "slow_mvmnt", "very_slow_mvmnt"];
-            nontime_reasons = setdiff(string(r_bt.Properties.VariableNames), ["any", "incorrect", "slow_mvmnt", "loop", time_crit]);
-            bad_nontime = any(r_bt{:, cellstr(nontime_reasons)} > 0, 2);
-
-            valid_mask = ~bad_nontime & (r_tbl.pas == 1) & (r_tbl.target_correct == 1);
-
-            con_mask = valid_mask & (r_tbl.target_label == r_tbl.prime_label);
-            incon_mask = valid_mask & (r_tbl.target_label ~= r_tbl.prime_label);
-
-            c_trajs = r_tbl.target_x_to(con_mask);
-            i_trajs = r_tbl.target_x_to(incon_mask);
-
-            if ~isempty(c_trajs)
-                c_mat = cell2mat(cellfun(@(x) x(:,1)', c_trajs, 'UniformOutput', false));
-                c_mean = mean(c_mat, 1, 'omitnan');
-                reach_area.con(s) = trapz(abs(c_mean)) * (1/200);
-            end
-            if ~isempty(i_trajs)
-                i_mat = cell2mat(cellfun(@(x) x(:,1)', i_trajs, 'UniformOutput', false));
-                i_mean = mean(i_mat, 1, 'omitnan');
-                reach_area.incon(s) = trapz(abs(i_mean)) * (1/200);
-            end
-        end
-
+        fprintf('Computing SI re-analysis trial averages (removing offline very_slow_mvmnt exclusions)...\n');
+        [r_avgs, k_avgs, r_trials, k_trials, reach_area] = compute_all_si_no_vslow(all_subs, raw_proc_folder, traj_names{1}, p);
         save(cache_file, 'r_avgs', 'k_avgs', 'r_trials', 'k_trials', 'reach_area');
+        save(legacy_cache_file, 'r_avgs', 'k_avgs', 'r_trials', 'k_trials', 'reach_area');
     end
 
-    % 2. Extract Data Matrices for N=36
+    % 2. Extract Data Matrices for N=31
     discrete_vars = {'kb_rt', 'ra', 'react', 'mt', 'tot_dist', 'com', 'mad', 'auc'};
     var_labels    = {'Keyboard RT', 'Reach Area', 'Reaching Onset', 'Movement Duration', ...
                      'Total Distance Traveled', 'Num of Changes of Mind', 'Maximum Absolute Deviation (MAD)', 'Area Under Curve (AUC)'};
-    var_units     = {'ms', 'cm^2', 'ms', 'ms', 'cm', 'count', 'cm', 'cm^2'};
+    var_units     = {'ms', '10^2 cm^2', 'ms', 'ms', 'cm', 'count', 'cm', '10^2 cm^2'};
     n_vars = numel(discrete_vars);
 
     con_mat   = NaN(n_subs, n_vars);
@@ -166,10 +111,6 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
         n_r_con   = numel(r_tr.react.con);
         n_r_incon = numel(r_tr.react.incon);
         n_r_tot   = n_r_con + n_r_incon;
-
-        n_k_con   = numel(k_tr.rt.con);
-        n_k_incon = numel(k_tr.rt.incon);
-        n_k_tot   = n_k_con + n_k_incon;
 
         for v_i = 1:n_vars
             v_name = discrete_vars{v_i};
@@ -203,9 +144,9 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
                     i_val = r_avg.mad.incon * 100;
                     t_val = mean([r_tr.mad.con(:); r_tr.mad.incon(:)], 'omitnan') * 100;
                 case 'auc'
-                    c_val = r_avg.auc.con * 10000;
-                    i_val = r_avg.auc.incon * 10000;
-                    t_val = mean([r_tr.auc.con(:); r_tr.auc.incon(:)], 'omitnan') * 10000;
+                    c_val = r_avg.auc.con;
+                    i_val = r_avg.auc.incon;
+                    t_val = mean([r_tr.auc.con(:); r_tr.auc.incon(:)], 'omitnan');
             end
             con_mat(s_idx, v_i)   = c_val;
             incon_mat(s_idx, v_i) = i_val;
@@ -255,7 +196,7 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
             'Cohen_dz', 't_stat', 'df', 'p_val'});
 
     % 4. Build Participant Breakdown Table (By_Sub_SI_noTimeExclusion)
-    sub_col = [good_subs_si(:); NaN; NaN];
+    sub_col = [arrayfun(@(x) sprintf('Prtcp %d', x), good_subs_si(:), 'UniformOutput', false); {'Group_Mean'; 'Group_SD'}];
     by_sub_vars = cell(1, n_vars * 3);
     by_sub_varnames = cell(1, n_vars * 3);
 
@@ -291,7 +232,7 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
 
     full_traj_clust_tbl = [tbl_traj; tbl_iep; tbl_xstd];
     full_traj_clust_tbl = addvars(full_traj_clust_tbl, repmat("TrajNorm_noTimeExclusion", height(full_traj_clust_tbl), 1), ...
-        'Before', 1, 'NewVariableNames', 'Flavor');
+        'Before', 1, 'NewVariableNames', 'Analysis');
 
     try
         adj_p = mafdr(full_traj_clust_tbl.p_val, 'BHFDR', true);
@@ -310,41 +251,9 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
     win_xstd = [c_xstd.start(1), c_xstd.end(1)];
 
     % 6. Bootstrap Effect Sizes strictly for Pre-Registered Variables (Flavor 4)
+    % Uses the exact same time-point cluster averaging formula as bootstrap_effect_sizes.m
     prereg_vars = {'kb_rt', 'ra', 'react', 'mt', 'tot_dist', 'com', 'traj', 'x_std'};
     n_prereg = numel(prereg_vars);
-
-    data1_prereg = NaN(n_subs, n_prereg);
-    data2_prereg = NaN(n_subs, n_prereg);
-
-    for s_i = 1:n_subs
-        s = good_subs_si(s_i);
-        r = r_avgs{s};
-        k = k_avgs{s};
-
-        data1_prereg(s_i, 1) = k.rt.con * 1000;
-        data2_prereg(s_i, 1) = k.rt.incon * 1000;
-
-        data1_prereg(s_i, 2) = reach_area.con(s);
-        data2_prereg(s_i, 2) = reach_area.incon(s);
-
-        data1_prereg(s_i, 3) = r.react.con * 1000;
-        data2_prereg(s_i, 3) = r.react.incon * 1000;
-
-        data1_prereg(s_i, 4) = r.mt.con * 1000;
-        data2_prereg(s_i, 4) = r.mt.incon * 1000;
-
-        data1_prereg(s_i, 5) = r.tot_dist.con * 100;
-        data2_prereg(s_i, 5) = r.tot_dist.incon * 100;
-
-        data1_prereg(s_i, 6) = r.com.con;
-        data2_prereg(s_i, 6) = r.com.incon;
-
-        data1_prereg(s_i, 7) = mean(r.traj.con(win_traj(1):win_traj(2), 1));
-        data2_prereg(s_i, 7) = mean(r.traj.incon(win_traj(1):win_traj(2), 1));
-
-        data1_prereg(s_i, 8) = mean(r.x_std.con(win_xstd(1):win_xstd(2)));
-        data2_prereg(s_i, 8) = mean(r.x_std.incon(win_xstd(1):win_xstd(2)));
-    end
 
     n_boot = 10000;
     rng(42, 'twister');
@@ -356,19 +265,46 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
 
     for v_i = 1:n_prereg
         v_name = prereg_vars{v_i};
-        d1 = data1_prereg(:, v_i);
-        d2 = data2_prereg(:, v_i);
+        switch v_name
+            case 'kb_rt'
+                d1 = con_mat(:, 1); d2 = incon_mat(:, 1);
+            case 'ra'
+                d1 = con_mat(:, 2); d2 = incon_mat(:, 2);
+            case 'react'
+                d1 = con_mat(:, 3); d2 = incon_mat(:, 3);
+            case 'mt'
+                d1 = con_mat(:, 4); d2 = incon_mat(:, 4);
+            case 'tot_dist'
+                d1 = con_mat(:, 5); d2 = incon_mat(:, 5);
+            case 'com'
+                d1 = con_mat(:, 6); d2 = incon_mat(:, 6);
+            case 'traj'
+                d1 = traj_con_mat(win_traj(1):win_traj(2), :)';
+                d2 = traj_incon_mat(win_traj(1):win_traj(2), :)';
+            case 'x_std'
+                d1 = x_std_con_mat(win_xstd(1):win_xstd(2), :)';
+                d2 = x_std_incon_mat(win_xstd(1):win_xstd(2), :)';
+        end
 
         diff_actual = d1 - d2;
-        mean_diff = mean(diff_actual, 'omitnan');
-        sd_diff   = std(diff_actual, 0, 'omitnan');
-        cohen_dz_val = abs(mean_diff / sd_diff);
+        mean_diff_per_time = mean(diff_actual, 1, 'omitnan');
+        sd_diff_per_time   = std(diff_actual, 0, 1, 'omitnan');
+        dz_per_time        = mean_diff_per_time ./ sd_diff_per_time;
 
-        q1 = prctile(diff_actual, 25);
-        q3 = prctile(diff_actual, 75);
-        iqr_val = q3 - q1;
-        has_outliers = any(diff_actual < (q1 - 1.5 * iqr_val) | diff_actual > (q3 + 1.5 * iqr_val));
-        dep_akp_val = abs(calc_dependent_akp(d1, d2));
+        mean_diff    = mean(mean_diff_per_time, 'omitnan');
+        sd_diff      = mean(sd_diff_per_time, 'omitnan');
+        cohen_dz_val = abs(mean(dz_per_time, 'omitnan'));
+
+        if size(diff_actual, 2) == 1
+            q1 = prctile(diff_actual, 25);
+            q3 = prctile(diff_actual, 75);
+            iqr_val = q3 - q1;
+            has_outliers = any(diff_actual < (q1 - 1.5 * iqr_val) | diff_actual > (q3 + 1.5 * iqr_val));
+            dep_akp_val = abs(calc_dependent_akp(d1, d2));
+        else
+            has_outliers = false;
+            dep_akp_val  = cohen_dz_val;
+        end
 
         if has_outliers
             reported_eff = dep_akp_val;
@@ -394,9 +330,21 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
         else
             reported_eff = cohen_dz_val;
             metric_name  = "Cohen_dz";
-            diff_s = d1 - d2;
-            boot_s = diff_s(boot_indices);
-            dist = abs(mean(boot_s, 1, 'omitnan') ./ std(boot_s, 0, 1, 'omitnan'))';
+            T = size(diff_actual, 2);
+            if T == 1
+                boot_s = diff_actual(boot_indices);
+                dist = abs(mean(boot_s, 1, 'omitnan') ./ std(boot_s, 0, 1, 'omitnan'))';
+            else
+                boot_dz_per_time = zeros(T, n_boot);
+                for t = 1:T
+                    diff_t = diff_actual(:, t);
+                    boot_samples_t = diff_t(boot_indices);
+                    boot_means = mean(boot_samples_t, 1, 'omitnan');
+                    boot_stds  = std(boot_samples_t, 0, 1, 'omitnan');
+                    boot_dz_per_time(t, :) = boot_means ./ boot_stds;
+                end
+                dist = abs(mean(boot_dz_per_time, 1, 'omitnan'))';
+            end
         end
 
         actual_dz_f4.(v_name) = reported_eff;
@@ -406,11 +354,11 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
             "TrajNorm_noTimeExclusion", string(v_name), metric_name, has_outliers, ...
             mean_diff, sd_diff, reported_eff, cohen_dz_val, dep_akp_val, ...
             prctile(dist, 2.5), prctile(dist, 97.5) ...
-        }];
+        }]; %#ok<AGROW>
     end
 
     effects_tbl_f4 = cell2table(eff_rows_f4, 'VariableNames', { ...
-        'Flavor', 'Effect', 'Metric_Used', 'Has_Outliers', ...
+        'Analysis', 'Effect', 'Metric_Used', 'Has_Outliers', ...
         'Mean_Diff', 'SD_Diff', 'Reported_Effect_Size', 'Cohens_dz', 'Dependent_AKP', ...
         'CI_Lower', 'CI_Upper'});
 
@@ -436,15 +384,22 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
             "TrajNorm_noTimeExclusion", ...
             string(sprintf('%s_minus_kb_rt', kv)), ...
             actual_diff, ci_l, ci_u, p_val_2s ...
-        }];
+        }]; %#ok<AGROW>
     end
 
     within_tbl_f4 = cell2table(within_rows_f4, 'VariableNames', { ...
-        'Flavor', 'Comparison', 'Effect_Size_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
+        'Analysis', 'Comparison', 'Effect_Size_Diff', 'CI_Lower', 'CI_Upper', 'P_Value'});
 
-    % 8. Side-by-Side Comparison Table: Flavor 4 vs Flavor 1
-    loaded_boot = load(fullfile(out_stats_dir, 'Bootstrap_Stats_Tables.mat'));
-    within_f1  = loaded_boot.within_tbl(string(loaded_boot.within_tbl.Flavor) == "TrajNorm_noStandardization", :);
+    % 8. Side-by-Side Comparison Table: WO Long-Duration Exclusion vs Pre-Registered
+    if nargin < 2 || isempty(within_tbl_f1)
+        if isfield(analysisPrms, 'statsTables') && isfield(analysisPrms.statsTables, 'Effect_Comparisons_Within')
+            within_tbl_f1 = analysisPrms.statsTables.Effect_Comparisons_Within;
+        else
+            error('generate_si_reanalysis_flavor:MissingInput', ...
+                'within_tbl_f1 must be provided in memory.');
+        end
+    end
+    within_f1 = within_tbl_f1(string(within_tbl_f1.Flavor) == "TrajNorm_noStandardization", :);
 
     f1_diff = zeros(numel(kin_vars), 1);
     f1_low  = zeros(numel(kin_vars), 1);
@@ -473,208 +428,277 @@ function [si_summary_tbl, si_by_sub_tbl, full_traj_clust_tbl, effects_tbl_f4, wi
         within_tbl_f4.Effect_Size_Diff, within_tbl_f4.CI_Lower, within_tbl_f4.CI_Upper, within_tbl_f4.P_Value, ...
         f1_diff, f1_low, f1_up, f1_p, ...
         'VariableNames', {'Kinematic_Metric', ...
-                          'F4_Delta_dz', 'F4_CI_Lower', 'F4_CI_Upper', 'F4_P_Value', ...
-                          'F1_Delta_dz', 'F1_CI_Lower', 'F1_CI_Upper', 'F1_P_Value'});
+                          'WO_Long_Dur_Delta_dz', 'WO_Long_Dur_CI_Lower', 'WO_Long_Dur_CI_Upper', 'WO_Long_Dur_P_Value', ...
+                          'PreReg_Delta_dz', 'PreReg_CI_Lower', 'PreReg_CI_Upper', 'PreReg_P_Value'});
 
-    % 9. Generate Forest Plots
-    plot_si_reanalysis_forests(effects_tbl_f4, within_tbl_f4, f4_vs_f1_tbl, out_figs_dir);
+    % 9. Build Trial-Level & Subject-Level Decomposition Table (PreReg vs Rescued VSM vs Combined WO Long Dur)
+    decomp_tbl = build_f4_decomposition_table(raw_proc_folder, traj_names{1}, p, r_avgs, r_trials, reach_area, good_subs_si, c_traj, c_xstd, c_iep);
 
-    % 10. Save Standalone CSVs
-    writetable(si_summary_tbl, fullfile(out_stats_dir, 'SI_Reanalysis_Summary.csv'));
-    writetable(si_by_sub_tbl, fullfile(out_stats_dir, 'By_Sub_SI_noTimeExclusion.csv'));
-    writetable(full_traj_clust_tbl, fullfile(out_stats_dir, 'Full_Traj_Permutation_Stats_Flavor_4.csv'));
-    writetable(effects_tbl_f4, fullfile(out_stats_dir, 'Effect_Sizes_Flavor_4.csv'));
-    writetable(within_tbl_f4, fullfile(out_stats_dir, 'Effect_Comparisons_Flavor_4_vs_KB_RT.csv'));
-    writetable(f4_vs_f1_tbl, fullfile(out_stats_dir, 'Effect_Comparisons_Flavor_4_vs_Flavor_1.csv'));
-
-    % 11. Generate Trial Exclusion Appendix Tables
-    [counts_tbl, pct_tbl] = generate_si_trial_exclusion_tables(raw_proc_folder, [47, 49:51, 53:57, 59, 62, 65:67, 70:72, 75:85, 88, 90], all_subs, out_stats_dir);
-
-    % 12. Save Dedicated Excel Workbook: SI_Reanalysis_noTimeExclusions.xlsx
-    xlsx_path = fullfile(out_stats_dir, 'SI_Reanalysis_noTimeExclusions.xlsx');
-    if exist(xlsx_path, 'file')
-        try, delete(xlsx_path); catch, end
-    end
-
-    writetable(si_summary_tbl, xlsx_path, 'Sheet', 'SI_Reanalysis_Summary');
-    writetable(si_by_sub_tbl, xlsx_path, 'Sheet', 'By_Sub_SI_noTimeExclusion');
-    writetable(counts_tbl, xlsx_path, 'Sheet', 'SI_Excl_All_Subs_Counts');
-    writetable(pct_tbl, xlsx_path, 'Sheet', 'SI_Excl_All_Subs_Pct');
-    writetable(full_traj_clust_tbl, xlsx_path, 'Sheet', 'Full_Traj_Permutation_Stats');
-    writetable(effects_tbl_f4, xlsx_path, 'Sheet', 'Effect_Sizes_Summary');
-    writetable(within_tbl_f4, xlsx_path, 'Sheet', 'Effect_Comparisons_vs_KB_RT');
-    writetable(f4_vs_f1_tbl, xlsx_path, 'Sheet', 'Effect_Comparisons_F4_vs_F1');
-
-    fprintf('Saved dedicated SI re-analysis workbook to %s\n', xlsx_path);
+    % 10. Package all SI re-analysis tables into output struct (no interim CSV/XLSX/figure files)
+    si_reanalysis_struct = struct( ...
+        'si_summary_tbl',      si_summary_tbl, ...
+        'decomp_tbl',          decomp_tbl, ...
+        'si_by_sub_tbl',       si_by_sub_tbl, ...
+        'full_traj_clust_tbl', full_traj_clust_tbl, ...
+        'effects_tbl_f4',      effects_tbl_f4, ...
+        'within_tbl_f4',       within_tbl_f4, ...
+        'f4_vs_f1_tbl',        f4_vs_f1_tbl, ...
+        'good_subs_si',        good_subs_si);
+    fprintf('=== Completed SI no-long-duration re-analysis in memory (N=%d) ===\n', n_subs);
 end
 
-function plot_si_reanalysis_forests(effects_tbl_f4, within_tbl_f4, f4_vs_f1_tbl, out_figs_dir)
-% PLOT_SI_REANALYSIS_FORESTS Generates effect size and paired forest plots for Flavor 4
+function [r_avgs, k_avgs, r_trials, k_trials, reach_area] = compute_all_si_no_vslow(all_subs, raw_proc_folder, traj_name, p)
+% COMPUTE_ALL_SI_NO_VSLOW Recomputes within-subject averages and Reach Area
+% when offline slow-movement ("very_slow_mvmnt") exclusions are removed,
+% restoring any underlying short_traj or missed_target flags masked by cancelDuplicates.
 
-    readable_names = containers.Map(...
-        {'react', 'mt', 'com', 'tot_dist', 'ra', 'kb_rt', 'traj', 'x_std'}, ...
-        {'Reaching Onset', 'Reaching Duration', 'Num of COM', ...
-         'Total Distance Traveled', 'Reach Area', 'Keyboard RT', ...
-         'Deviation From Center', 'Movement Variance (X-STD)'});
+    bt_file = fullfile(raw_proc_folder, 'bad_trials_day2_target_x_to_subs_47_49-85_87-90.mat');
+    bt = load(bt_file);
+    reach_bad_trials_novslow = bt.reach_bad_trials;
+    keyboard_bad_trials = bt.keyboard_bad_trials;
 
-    % -------------------------------------------------------------
-    % Plot 1: Standardized Effect Sizes for Flavor 4 Alone
-    % -------------------------------------------------------------
-    fig1 = figure('Name', 'Effect Sizes - Flavor 4', 'Color', 'w', 'Position', [80 80 1120 580], 'Visible', 'off');
-    ax1 = axes('Parent', fig1);
-    hold(ax1, 'on');
+    p_raw = p;
+    p_raw.PROC_DATA_FOLDER = [replace(raw_proc_folder, '\', '/'), '/'];
 
-    n_rows = height(effects_tbl_f4);
-    y = n_rows : -1 : 1;
-    vars = effects_tbl_f4.Effect;
+    r_avgs   = cell(max(all_subs), 1);
+    k_avgs   = cell(max(all_subs), 1);
+    r_trials = cell(max(all_subs), 1);
+    k_trials = cell(max(all_subs), 1);
+    reach_area = struct('con', NaN(max(all_subs), 1), 'incon', NaN(max(all_subs), 1));
 
-    readable_vars = strings(length(vars), 1);
-    for v = 1:length(vars)
-        if isKey(readable_names, char(vars(v)))
-            readable_vars(v) = readable_names(char(vars(v)));
-        else
-            readable_vars(v) = strrep(char(vars(v)), '_', ' ');
+    for s = all_subs
+        p_sub = defineParams_within_round(p_raw, s);
+        p_sub.PROC_DATA_FOLDER = p_raw.PROC_DATA_FOLDER;
+
+        r_bt = reach_bad_trials_novslow{s};
+        idx_vs = find(r_bt.very_slow_mvmnt > 0);
+        if ~isempty(idx_vs)
+            tr_raw = load(fullfile(raw_proc_folder, sprintf('sub%dday2_reach_traj.mat', s)));
+            tr_pre = load(fullfile(raw_proc_folder, sprintf('sub%dday2_reach_pre_norm_traj.mat', s)));
+            reach_traj_table = tr_raw.reach_traj_table;
+            reach_pre_norm_traj_table = tr_pre.reach_pre_norm_traj_table;
+            reach_traj_table(reach_traj_table.practice >= 1, :) = [];
+            reach_pre_norm_traj_table(reach_pre_norm_traj_table.practice >= 1, :) = [];
+
+            trajs_mat = reshape(reach_traj_table{:, traj_name}, p_sub.MAX_CAP_LENGTH, p_sub.NUM_TRIALS, 3);
+            trajs_pre_norm = reshape(reach_pre_norm_traj_table{:, traj_name}, p_sub.MAX_CAP_LENGTH, p_sub.NUM_TRIALS, 3);
+
+            for t = idx_vs'
+                if ~testReachDist(squeeze(trajs_pre_norm(:, t, :)), p_sub)
+                    r_bt.short_traj(t) = t;
+                end
+                if ~testMissTarget(squeeze(trajs_mat(:, t, :)), p_sub)
+                    r_bt.missed_target(t) = t;
+                end
+            end
+        end
+
+        r_bt.very_slow_mvmnt(:) = 0;
+        important_tests = setdiff(string(r_bt.Properties.VariableNames), ["slow_mvmnt", "loop", "any"]);
+        r_bt.any = any(r_bt{:, cellstr(important_tests)} > 0, 2);
+        reach_bad_trials_novslow{s} = r_bt;
+
+        [r_avg, r_tr, k_avg, k_tr] = avgWithin(s, traj_name, reach_bad_trials_novslow, keyboard_bad_trials, 1, 0, p_sub);
+        r_avgs{s}   = r_avg;
+        r_trials{s} = r_tr;
+        k_avgs{s}   = k_avg;
+        k_trials{s} = k_tr;
+
+        reach_area.con(s)   = calcReachArea(r_avg.traj.con_left, r_avg.traj.con_right, p_sub);
+        reach_area.incon(s) = calcReachArea(r_avg.traj.incon_left, r_avg.traj.incon_right, p_sub);
+    end
+end
+
+function decomp_tbl = build_f4_decomposition_table(raw_proc_folder, traj_name, p, r_avgs_f4, ~, ra_f4, good_subs_si, c_traj, c_xstd, c_iep)
+% BUILD_F4_DECOMPOSITION_TABLE Compares pooled Flavor 1 trials, pooled rescued
+% very_slow_mvmnt trials alone, and subject-level means (Flavor 1 N=30, Flavor 4 N=30, Flavor 4 N=31)
+% across all discrete and full-trajectory reaching measures.
+
+    good_subs_f1 = [47, 49:51, 53:57, 59, 62, 65:67, 70:72, 75:85, 88, 90]; % N=30
+    bt_file = fullfile(raw_proc_folder, 'bad_trials_day2_target_x_to_subs_47_49-85_87-90.mat');
+    bt = load(bt_file);
+    reach_bt = bt.reach_bad_trials;
+
+    p_raw = p;
+    p_raw.PROC_DATA_FOLDER = [replace(raw_proc_folder, '\', '/'), '/'];
+
+    r_avgs_f1 = cell(max(good_subs_si), 1);
+    r_trials_f1 = cell(max(good_subs_si), 1);
+    ra_f1 = struct('con', NaN(max(good_subs_si), 1), 'incon', NaN(max(good_subs_si), 1));
+
+    f1_trajs_cl = []; f1_trajs_cr = []; f1_trajs_il = []; f1_trajs_ir = [];
+    vsm_trajs_cl = []; vsm_trajs_cr = []; vsm_trajs_il = []; vsm_trajs_ir = [];
+    f1_iep_c = []; f1_iep_i = [];
+    vsm_iep_c = []; vsm_iep_i = [];
+
+    disc_vars = {'react', 'mt', 'tot_dist', 'com', 'mad', 'auc'};
+    f1_pool = struct(); vsm_pool = struct();
+    for v = 1:numel(disc_vars)
+        vn = disc_vars{v};
+        f1_pool.(vn) = struct('c', [], 'i', []);
+        vsm_pool.(vn) = struct('c', [], 'i', []);
+    end
+
+    for s = good_subs_f1
+        p_sub = defineParams_within_round(p_raw, s);
+        p_sub.PROC_DATA_FOLDER = p_raw.PROC_DATA_FOLDER;
+        [r_avg, r_tr, ~, ~] = avgWithin(s, traj_name, reach_bt, bt.keyboard_bad_trials, 1, 0, p_sub);
+        r_avgs_f1{s} = r_avg;
+        r_trials_f1{s} = r_tr;
+        ra_f1.con(s) = calcReachArea(r_avg.traj.con_left, r_avg.traj.con_right, p_sub);
+        ra_f1.incon(s) = calcReachArea(r_avg.traj.incon_left, r_avg.traj.incon_right, p_sub);
+
+        f1_trajs_cl = cat(2, f1_trajs_cl, r_tr.trajs.con_left);
+        f1_trajs_cr = cat(2, f1_trajs_cr, r_tr.trajs.con_right);
+        f1_trajs_il = cat(2, f1_trajs_il, r_tr.trajs.incon_left);
+        f1_trajs_ir = cat(2, f1_trajs_ir, r_tr.trajs.incon_right);
+        f1_iep_c = cat(2, f1_iep_c, [-r_tr.iep.con_left, r_tr.iep.con_right]);
+        f1_iep_i = cat(2, f1_iep_i, [-r_tr.iep.incon_left, r_tr.iep.incon_right]);
+
+        % Identify rescued VSM trials for subject s
+        r_bt = reach_bt{s};
+        reasons_f1 = setdiff(string(r_bt.Properties.VariableNames), ["any","slow_mvmnt","loop"]);
+        bad_f1 = any(r_bt{:, cellstr(reasons_f1)}, 2);
+        tr_raw = load(fullfile(raw_proc_folder, sprintf('sub%dday2_reach_traj.mat', s)));
+        tr_pre = load(fullfile(raw_proc_folder, sprintf('sub%dday2_reach_pre_norm_traj.mat', s)));
+        rt_t = tr_raw.reach_traj_table; rt_t(rt_t.practice >= 1, :) = [];
+        rp_t = tr_pre.reach_pre_norm_traj_table; rp_t(rp_t.practice >= 1, :) = [];
+        t_mat = reshape(rt_t{:, traj_name}, p_sub.MAX_CAP_LENGTH, p_sub.NUM_TRIALS, 3);
+        tp_mat = reshape(rp_t{:, traj_name}, p_sub.MAX_CAP_LENGTH, p_sub.NUM_TRIALS, 3);
+        r_bt4 = r_bt;
+        for t = find(r_bt.very_slow_mvmnt > 0)'
+            if ~testReachDist(squeeze(tp_mat(:,t,:)), p_sub), r_bt4.short_traj(t) = t; end
+            if ~testMissTarget(squeeze(t_mat(:,t,:)), p_sub), r_bt4.missed_target(t) = t; end
+        end
+        r_bt4.very_slow_mvmnt(:) = 0;
+        bad_f4 = any(r_bt4{:, cellstr(reasons_f1)}, 2);
+        is_rescued = bad_f1 & ~bad_f4;
+        r_bt_vsm_only = r_bt4;
+        r_bt_vsm_only.very_slow_mvmnt(~is_rescued) = 1;
+        [~, tr_vsm, ~, ~] = avgWithin(s, traj_name, [repmat({[]}, s-1, 1); {r_bt_vsm_only}], bt.keyboard_bad_trials, 1, 0, p_sub);
+
+        vsm_trajs_cl = cat(2, vsm_trajs_cl, tr_vsm.trajs.con_left);
+        vsm_trajs_cr = cat(2, vsm_trajs_cr, tr_vsm.trajs.con_right);
+        vsm_trajs_il = cat(2, vsm_trajs_il, tr_vsm.trajs.incon_left);
+        vsm_trajs_ir = cat(2, vsm_trajs_ir, tr_vsm.trajs.incon_right);
+        vsm_iep_c = cat(2, vsm_iep_c, [-tr_vsm.iep.con_left, tr_vsm.iep.con_right]);
+        vsm_iep_i = cat(2, vsm_iep_i, [-tr_vsm.iep.incon_left, tr_vsm.iep.incon_right]);
+
+        for v = 1:numel(disc_vars)
+            vn = disc_vars{v};
+            mult = 1;
+            if ismember(vn, {'react','mt'}), mult = 1000;
+            elseif ismember(vn, {'tot_dist','mad'}), mult = 100;
+            end
+            f1_pool.(vn).c = [f1_pool.(vn).c; r_tr.(vn).con(:) * mult];
+            f1_pool.(vn).i = [f1_pool.(vn).i; r_tr.(vn).incon(:) * mult];
+            vsm_pool.(vn).c = [vsm_pool.(vn).c; tr_vsm.(vn).con(:) * mult];
+            vsm_pool.(vn).i = [vsm_pool.(vn).i; tr_vsm.(vn).incon(:) * mult];
         end
     end
 
-    err_neg = effects_tbl_f4.Reported_Effect_Size - effects_tbl_f4.CI_Lower;
-    err_pos = effects_tbl_f4.CI_Upper - effects_tbl_f4.Reported_Effect_Size;
-
-    errorbar(ax1, effects_tbl_f4.Reported_Effect_Size, y, err_neg, err_pos, 'horizontal', 's', ...
-        'LineWidth', 1.6, 'MarkerSize', 8, 'MarkerFaceColor', [0.05 0.35 0.85], ...
-        'Color', [0.00 0.35 0.75], 'CapSize', 10);
-
-    [sorted_y, s_idx] = sort(y);
-    set(ax1, 'YTick', sorted_y, 'YTickLabel', readable_vars(s_idx), 'FontSize', 11.5);
-    ylim(ax1, [0.4, n_rows + 0.65]);
-    min_x = min(0, min(effects_tbl_f4.CI_Lower) - 0.1);
-    max_x = max(effects_tbl_f4.CI_Upper) + 0.65;
-    xlim(ax1, [min_x, max_x]);
-    xlabel(ax1, 'Standardized Effect Size (d_z / Dependent AKP)', 'FontSize', 13.5);
-    title(ax1, {'Supplementary Re-Analysis (Flavor 4): Pre-Registered Variables Only', ...
-                'No Time-Sensitive Exclusion Criteria (Trajectories normalized to %path, N=36)'}, ...
-                'FontSize', 12.5, 'FontWeight', 'bold');
-
-    for j = 1:length(y)
-        val_str = format_num(effects_tbl_f4.Reported_Effect_Size(j));
-        low_str = format_num(effects_tbl_f4.CI_Lower(j));
-        up_str  = format_num(effects_tbl_f4.CI_Upper(j));
-        txt = sprintf('%s [%s, %s]', val_str, low_str, up_str);
-        text(ax1, effects_tbl_f4.CI_Upper(j) + 0.04, y(j), txt, 'VerticalAlignment', 'middle', 'FontSize', 10.5);
-    end
-    box(ax1, 'off');
-    set(ax1, 'TickDir', 'out');
-    grid(ax1, 'on');
-
-    f1_base = fullfile(out_figs_dir, 'Effect_Sizes_Flavor_4_noTimeExclusion');
-    exportgraphics(fig1, [f1_base, '.png'], 'Resolution', 300);
-    exportgraphics(fig1, [f1_base, '.pdf'], 'ContentType', 'vector');
-    saveas(fig1, [f1_base, '.fig']);
-    saveas(fig1, [f1_base, '.svg']);
-    close(fig1);
-
-    % -------------------------------------------------------------
-    % Plot 2: Paired Side-by-Side Forest Plot: Flavor 4 vs Flavor 1
-    %         (Flavor 4 right above Flavor 1 for each kinematic metric)
-    % -------------------------------------------------------------
-    kin_vars = {'ra', 'mt', 'tot_dist', 'react', 'com', 'traj', 'x_std'};
-    kin_labels = { ...
-        'Reach Area', ...
-        'Reaching Duration', ...
-        'Total Distance Traveled', ...
-        'Reaching Onset', ...
-        'Num of COM', ...
-        'Deviation From Center', ...
-        'Movement Variance (X-STD)' ...
-    };
-    n_k = numel(kin_vars);
-
-    fig2 = figure('Name', 'Effect Comparisons - Flavor 4 vs Flavor 1', 'Color', 'w', 'Position', [80 80 1350 780], 'Visible', 'off');
-    ax2 = axes('Parent', fig2);
-    hold(ax2, 'on');
-
-    y_centers = (n_k : -1 : 1) * 2;
-    y_f4 = y_centers + 0.28;
-    y_f1 = y_centers - 0.28;
-
-    % Background bands
-    for v = 1:n_k
-        y_b = y_centers(v) - 0.75;
-        y_t = y_centers(v) + 0.75;
-        if mod(v, 2) == 1
-            patch(ax2, [-10 10 10 -10], [y_b y_b y_t y_t], [0.96 0.97 1.00], 'EdgeColor', 'none', 'FaceAlpha', 0.6);
-        else
-            patch(ax2, [-10 10 10 -10], [y_b y_b y_t y_t], [0.98 0.98 0.98], 'EdgeColor', 'none', 'FaceAlpha', 0.6);
-        end
-    end
-
-    plot(ax2, [0 0], [0.5, max(y_centers) + 1.2], 'k--', 'LineWidth', 1.5);
-
-    % Flavor 1: Red circles
-    err_neg_f1 = f4_vs_f1_tbl.F1_Delta_dz - f4_vs_f1_tbl.F1_CI_Lower;
-    err_pos_f1 = f4_vs_f1_tbl.F1_CI_Upper - f4_vs_f1_tbl.F1_Delta_dz;
-    h_f1 = errorbar(ax2, f4_vs_f1_tbl.F1_Delta_dz, y_f1, err_neg_f1, err_pos_f1, 'horizontal', 'o', ...
-        'LineWidth', 1.6, 'MarkerSize', 7, 'MarkerFaceColor', [0.85 0.15 0.15], ...
-        'Color', [0.85 0.15 0.15], 'CapSize', 8, 'DisplayName', 'Flavor 1: Pre-registered (With Time Exclusions, N=30)');
-
-    % Flavor 4: Blue squares
-    err_neg_f4 = f4_vs_f1_tbl.F4_Delta_dz - f4_vs_f1_tbl.F4_CI_Lower;
-    err_pos_f4 = f4_vs_f1_tbl.F4_CI_Upper - f4_vs_f1_tbl.F4_Delta_dz;
-    h_f4 = errorbar(ax2, f4_vs_f1_tbl.F4_Delta_dz, y_f4, err_neg_f4, err_pos_f4, 'horizontal', 's', ...
-        'LineWidth', 1.6, 'MarkerSize', 7, 'MarkerFaceColor', [0.05 0.35 0.85], ...
-        'Color', [0.05 0.35 0.85], 'CapSize', 8, 'DisplayName', 'Flavor 4: SI Re-analysis (No Time Exclusions, N=36)');
-
-    min_x = min([f4_vs_f1_tbl.F1_CI_Lower; f4_vs_f1_tbl.F4_CI_Lower]) - 0.20;
-    max_x = max([f4_vs_f1_tbl.F1_CI_Upper; f4_vs_f1_tbl.F4_CI_Upper]) + 1.25;
-    xlim(ax2, [min_x, max_x]);
-    ylim(ax2, [0.5, max(y_centers) + 1.2]);
-
-    [y_sorted, s_idx] = sort(y_centers);
-    set(ax2, 'YTick', y_sorted, 'YTickLabel', kin_labels(s_idx), 'FontSize', 11, 'FontWeight', 'bold');
-    xlabel(ax2, '\Delta Standardized Effect Size (Kinematic Variable - Keyboard RT)', 'FontSize', 12.5, 'FontWeight', 'bold');
-    title(ax2, {'Pre-Registered Kinematic Effect Size Differences Compared to KB RT', ...
-               'Side-by-Side Comparison: Flavor 4 (No Time Exclusions, N=36) vs. Flavor 1 (Pre-registered, N=30)'}, ...
-               'FontSize', 13, 'FontWeight', 'bold');
-
-    legend(ax2, [h_f4, h_f1], {'Flavor 4 (SI Re-analysis: No Time Exclusions, N=36)', ...
-                              'Flavor 1 (Main Manuscript: Pre-registered Time Exclusions, N=30)'}, ...
-           'Location', 'northwest', 'FontSize', 10, 'Box', 'on', 'Color', [1 1 1 0.9]);
-
-    for v = 1:n_k
-        txt_f4 = sprintf('F4: %s [%s, %s], %s', format_num(f4_vs_f1_tbl.F4_Delta_dz(v)), ...
-            format_num(f4_vs_f1_tbl.F4_CI_Lower(v)), format_num(f4_vs_f1_tbl.F4_CI_Upper(v)), format_p(f4_vs_f1_tbl.F4_P_Value(v)));
-        text(ax2, f4_vs_f1_tbl.F4_CI_Upper(v) + 0.04, y_f4(v), txt_f4, 'FontSize', 9.5, 'Color', [0.05 0.30 0.75], 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
-
-        txt_f1 = sprintf('F1: %s [%s, %s], %s', format_num(f4_vs_f1_tbl.F1_Delta_dz(v)), ...
-            format_num(f4_vs_f1_tbl.F1_CI_Lower(v)), format_num(f4_vs_f1_tbl.F1_CI_Upper(v)), format_p(f4_vs_f1_tbl.F1_P_Value(v)));
-        text(ax2, f4_vs_f1_tbl.F1_CI_Upper(v) + 0.04, y_f1(v), txt_f1, 'FontSize', 9.5, 'Color', [0.75 0.10 0.10], 'VerticalAlignment', 'middle');
-    end
-
-    box(ax2, 'off');
-    set(ax2, 'TickDir', 'out');
-    grid(ax2, 'on');
-
-    f2_base = fullfile(out_figs_dir, 'Effect_Comparisons_Flavor_4_vs_Flavor_1_SideBySide');
-    exportgraphics(fig2, [f2_base, '.png'], 'Resolution', 300);
-    exportgraphics(fig2, [f2_base, '.pdf'], 'ContentType', 'vector');
-    saveas(fig2, [f2_base, '.fig']);
-    saveas(fig2, [f2_base, '.svg']);
-    close(fig2);
-
-    fprintf('Saved all Flavor 4 effect size figures to %s\n', out_figs_dir);
-end
-
-function s = format_num(val)
-    s = sprintf('%.2f', val);
-    s = strrep(s, '0.', '.');
-    s = strrep(s, '-0.', '-.');
-end
-
-function s = format_p(p)
-    if p < 0.001
-        s = 'p<.001';
+    p_sub = defineParams_within_round(p_raw, good_subs_f1(1));
+    all_vars = {'ra', 'react', 'mt', 'tot_dist', 'com', 'mad', 'auc', 'traj', 'x_std', 'iep'};
+    all_lbls = {'Reach Area', 'Reaching Onset', 'Reaching Duration', 'Distance Traveled', ...
+                'Changes of Mind (COM)', 'Maximum Absolute Deviation (MAD)', 'Area Under Curve (AUC)', ...
+                'Deviance From Center (Cluster)', 'Horizontal Movement Variation (Cluster)', 'Implied Endpoint (Cluster)'};
+    all_units = {'10^2 cm^2', 'ms', 'ms', 'cm', 'count', 'cm', '10^2 cm^2', 'cm', 'cm', 'cm'};
+    if nargin >= 10 && ~isempty(c_traj) && ~isempty(c_traj.start) && c_traj.p_val(1) < 0.05
+        w_traj = c_traj.start(1):c_traj.end(1);
     else
-        s = sprintf('p=%.3f', p);
-        s = strrep(s, 'p=0.', 'p=.');
+        w_traj = 1:200;
     end
+    if nargin >= 10 && ~isempty(c_xstd) && ~isempty(c_xstd.start) && c_xstd.p_val(1) < 0.05
+        w_xstd = c_xstd.start(1):c_xstd.end(1);
+    else
+        w_xstd = 1:200;
+    end
+    if nargin >= 10 && ~isempty(c_iep) && ~isempty(c_iep.start) && c_iep.p_val(1) < 0.05
+        w_iep = c_iep.start(1):c_iep.end(1);
+    else
+        w_iep = 1:200;
+    end
+    all_types = {'Ensemble (Left/Right Area)', 'Single-Trial', 'Single-Trial', 'Single-Trial', ...
+                 'Single-Trial', 'Single-Trial', 'Single-Trial', ...
+                 sprintf('Full-Traj Cluster (%.1f-%.1f%%)', w_traj(1)*0.5, w_traj(end)*0.5), ...
+                 sprintf('Full-Traj Cluster (%.1f-%.1f%%)', w_xstd(1)*0.5, w_xstd(end)*0.5), ...
+                 sprintf('Full-Traj Cluster (%.1f-%.1f%%)', w_iep(1)*0.5,  w_iep(end)*0.5)};
+
+    rows = {};
+    for k = 1:numel(all_vars)
+        vn = all_vars{k};
+        switch vn
+            case 'ra'
+                f1_c = calcReachArea(squeeze(mean(f1_trajs_cl, 2)), squeeze(mean(f1_trajs_cr, 2)), p_sub);
+                f1_i = calcReachArea(squeeze(mean(f1_trajs_il, 2)), squeeze(mean(f1_trajs_ir, 2)), p_sub);
+                vsm_c = calcReachArea(squeeze(mean(vsm_trajs_cl, 2)), squeeze(mean(vsm_trajs_cr, 2)), p_sub);
+                vsm_i = calcReachArea(squeeze(mean(vsm_trajs_il, 2)), squeeze(mean(vsm_trajs_ir, 2)), p_sub);
+                d_f1_30 = ra_f1.incon(good_subs_f1) - ra_f1.con(good_subs_f1);
+                d_f4_30 = ra_f4.incon(good_subs_f1) - ra_f4.con(good_subs_f1);
+                d_f4_31 = ra_f4.incon(good_subs_si) - ra_f4.con(good_subs_si);
+            case {'react', 'mt', 'tot_dist', 'com', 'mad', 'auc'}
+                f1_c = mean(f1_pool.(vn).c, 'omitnan');
+                f1_i = mean(f1_pool.(vn).i, 'omitnan');
+                vsm_c = mean(vsm_pool.(vn).c, 'omitnan');
+                vsm_i = mean(vsm_pool.(vn).i, 'omitnan');
+                mult = 1;
+                if ismember(vn, {'react','mt'}), mult = 1000;
+                elseif ismember(vn, {'tot_dist','mad'}), mult = 100;
+                end
+                d_f1_30 = arrayfun(@(s) (r_avgs_f1{s}.(vn).incon - r_avgs_f1{s}.(vn).con)*mult, good_subs_f1(:));
+                d_f4_30 = arrayfun(@(s) (r_avgs_f4{s}.(vn).incon - r_avgs_f4{s}.(vn).con)*mult, good_subs_f1(:));
+                d_f4_31 = arrayfun(@(s) (r_avgs_f4{s}.(vn).incon - r_avgs_f4{s}.(vn).con)*mult, good_subs_si(:));
+            case 'traj'
+                f1_tc = [-squeeze(f1_trajs_cl(w_traj, :, 1)), squeeze(f1_trajs_cr(w_traj, :, 1))] * 100;
+                f1_ti = [-squeeze(f1_trajs_il(w_traj, :, 1)), squeeze(f1_trajs_ir(w_traj, :, 1))] * 100;
+                vsm_tc = [-squeeze(vsm_trajs_cl(w_traj, :, 1)), squeeze(vsm_trajs_cr(w_traj, :, 1))] * 100;
+                vsm_ti = [-squeeze(vsm_trajs_il(w_traj, :, 1)), squeeze(vsm_trajs_ir(w_traj, :, 1))] * 100;
+                f1_c = mean(f1_tc, 'all'); f1_i = mean(f1_ti, 'all');
+                vsm_c = mean(vsm_tc, 'all'); vsm_i = mean(vsm_ti, 'all');
+                d_f1_30 = arrayfun(@(s) mean(r_avgs_f1{s}.traj.incon(w_traj,1) - r_avgs_f1{s}.traj.con(w_traj,1))*100, good_subs_f1(:));
+                d_f4_30 = arrayfun(@(s) mean(r_avgs_f4{s}.traj.incon(w_traj,1) - r_avgs_f4{s}.traj.con(w_traj,1))*100, good_subs_f1(:));
+                d_f4_31 = arrayfun(@(s) mean(r_avgs_f4{s}.traj.incon(w_traj,1) - r_avgs_f4{s}.traj.con(w_traj,1))*100, good_subs_si(:));
+            case 'x_std'
+                f1_xc = std([squeeze(f1_trajs_cl(w_xstd, :, 1)), squeeze(f1_trajs_cr(w_xstd, :, 1))] * 100, 0, 2);
+                f1_xi = std([squeeze(f1_trajs_il(w_xstd, :, 1)), squeeze(f1_trajs_ir(w_xstd, :, 1))] * 100, 0, 2);
+                vsm_xc = std([squeeze(vsm_trajs_cl(w_xstd, :, 1)), squeeze(vsm_trajs_cr(w_xstd, :, 1))] * 100, 0, 2);
+                vsm_xi = std([squeeze(vsm_trajs_il(w_xstd, :, 1)), squeeze(vsm_trajs_ir(w_xstd, :, 1))] * 100, 0, 2);
+                f1_c = mean(f1_xc); f1_i = mean(f1_xi);
+                vsm_c = mean(vsm_xc); vsm_i = mean(vsm_xi);
+                d_f1_30 = arrayfun(@(s) mean(r_avgs_f1{s}.x_std.incon(w_xstd) - r_avgs_f1{s}.x_std.con(w_xstd))*100, good_subs_f1(:));
+                d_f4_30 = arrayfun(@(s) mean(r_avgs_f4{s}.x_std.incon(w_xstd) - r_avgs_f4{s}.x_std.con(w_xstd))*100, good_subs_f1(:));
+                d_f4_31 = arrayfun(@(s) mean(r_avgs_f4{s}.x_std.incon(w_xstd) - r_avgs_f4{s}.x_std.con(w_xstd))*100, good_subs_si(:));
+            case 'iep'
+                f1_c = mean(f1_iep_c(w_iep, :)*100, 'all');
+                f1_i = mean(f1_iep_i(w_iep, :)*100, 'all');
+                vsm_c = mean(vsm_iep_c(w_iep, :)*100, 'all');
+                vsm_i = mean(vsm_iep_i(w_iep, :)*100, 'all');
+                d_f1_30 = arrayfun(@(s) mean(r_avgs_f1{s}.iep.incon(w_iep) - r_avgs_f1{s}.iep.con(w_iep))*100, good_subs_f1(:));
+                d_f4_30 = arrayfun(@(s) mean(r_avgs_f4{s}.iep.incon(w_iep) - r_avgs_f4{s}.iep.con(w_iep))*100, good_subs_f1(:));
+                d_f4_31 = arrayfun(@(s) mean(r_avgs_f4{s}.iep.incon(w_iep) - r_avgs_f4{s}.iep.con(w_iep))*100, good_subs_si(:));
+        end
+
+        m1 = mean(d_f1_30); sd1 = std(d_f1_30); dz1 = m1 / sd1;
+        m4_30 = mean(d_f4_30); sd4_30 = std(d_f4_30); dz4_30 = m4_30 / sd4_30;
+        m4_31 = mean(d_f4_31); sd4_31 = std(d_f4_31); dz4_31 = m4_31 / sd4_31;
+
+        rows = [rows; { ...
+            string(vn), string(all_lbls{k}), string(all_units{k}), string(all_types{k}), ...
+            f1_c, f1_i, f1_i - f1_c, ...
+            vsm_c, vsm_i, vsm_i - vsm_c, ...
+            m1, sd1, dz1, ...
+            m4_30, sd4_30, dz4_30, ...
+            100*(abs(m4_30)-abs(m1))/abs(m1), 100*(sd4_30-sd1)/sd1, ...
+            m4_31, sd4_31, dz4_31 ...
+        }]; %#ok<AGROW>
+    end
+
+    decomp_tbl = cell2table(rows, 'VariableNames', { ...
+        'Variable', 'Measure', 'Units', 'Metric_Type', ...
+        'PreReg_Pooled_Con', 'PreReg_Pooled_Incon', 'PreReg_Pooled_Diff', ...
+        'Rescued_Slow_Pooled_Con', 'Rescued_Slow_Pooled_Incon', 'Rescued_Slow_Pooled_Diff', ...
+        'PreReg_N30_Mean_Diff', 'PreReg_N30_SD_Diff', 'PreReg_N30_Cohens_dz', ...
+        'WO_Long_Dur_N30_Mean_Diff', 'WO_Long_Dur_N30_SD_Diff', 'WO_Long_Dur_N30_Cohens_dz', ...
+        'Pct_Change_Mean_Diff_N30', 'Pct_Change_SD_Diff_N30', ...
+        'WO_Long_Dur_N31_Mean_Diff', 'WO_Long_Dur_N31_SD_Diff', 'WO_Long_Dur_N31_Cohens_dz'});
 end

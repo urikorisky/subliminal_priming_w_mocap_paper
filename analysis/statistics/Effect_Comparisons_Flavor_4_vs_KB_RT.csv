@@ -1,8 +1,0 @@
-Flavor,Comparison,Effect_Size_Diff,CI_Lower,CI_Upper,P_Value
-TrajNorm_noTimeExclusion,ra_minus_kb_rt,-0.408863280486054,-0.995270043222873,0.105170849480452,0.112
-TrajNorm_noTimeExclusion,mt_minus_kb_rt,-1.1256111676781,-1.68045445803297,-0.588444050251816,0
-TrajNorm_noTimeExclusion,tot_dist_minus_kb_rt,-1.11693251111114,-1.6802706683406,-0.578939394344987,0
-TrajNorm_noTimeExclusion,react_minus_kb_rt,-1.12738175143326,-1.66687677288266,-0.614995967312127,0
-TrajNorm_noTimeExclusion,com_minus_kb_rt,-1.04233509620335,-1.59877383104455,-0.570439496777633,0
-TrajNorm_noTimeExclusion,traj_minus_kb_rt,-0.315140802810746,-0.894720601870745,0.193229504563158,0.2142
-TrajNorm_noTimeExclusion,x_std_minus_kb_rt,-0.410728913546331,-0.965034386058765,0.0568745012341365,0.0864
